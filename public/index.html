@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comment Overlay</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    }
+
+    .comment {
+      position: absolute;
+      white-space: nowrap;
+      font-size: 32px;
+      font-weight: bold;
+      color: #ffffff;
+      text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000;
+      will-change: transform;
+      animation: flow 8s linear forwards;
+    }
+
+    @keyframes flow {
+      from {
+        transform: translateX(100vw);
+      }
+      to {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // WebSocket接続
+    let ws;
+    let reconnectTimer;
+
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.text) {
+          showComment(data.text);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected, reconnecting in 3s...');
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error('WebSocket error:', err);
+        ws.close();
+      };
+    }
+
+    // コメント表示
+    function showComment(text) {
+      const comment = document.createElement('div');
+      comment.className = 'comment';
+      comment.textContent = text;
+
+      // Y座標: 画面高さの10%〜90%でランダム
+      const minY = window.innerHeight * 0.1;
+      const maxY = window.innerHeight * 0.9;
+      const y = Math.random() * (maxY - minY) + minY;
+      comment.style.top = `${y}px`;
+
+      document.body.appendChild(comment);
+
+      // アニメーション終了後に要素を削除
+      comment.addEventListener('animationend', () => {
+        comment.remove();
+      });
+    }
+
+    // 接続開始
+    connect();
+  </script>
+</body>
+</html>
