@@ -80,7 +80,11 @@ SLACK_APP_TOKEN=xapp-xxxx  # 手順2で取得したトークン
 監視したいスレッドのURLを引数に指定して起動:
 
 ```bash
-node src/server.js "https://xxx.slack.com/archives/C1234567890/p1705200000000000"
+# 開発時（ホットリロード有効）
+npm run dev "https://xxx.slack.com/archives/C1234567890/p1705200000000000"
+
+# 本番実行
+npm run build && npm start "https://xxx.slack.com/archives/C1234567890/p1705200000000000"
 ```
 
 スレッドURLは、Slackでスレッドを開き「リンクをコピー」で取得できます。
