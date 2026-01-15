@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { App } from '@slack/bolt';
+import pkg from '@slack/bolt';
+const { App } = pkg;
 import express from 'express';
 import { createServer } from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
@@ -20,6 +21,70 @@ interface ThreadInfo {
 
 interface CommentMessage {
   text: string;
+  userName: string;
+}
+
+interface UserCache {
+  displayName: string;
+}
+
+// テスト用に型を定義（Slack WebClient の部分的な型）
+export interface SlackClient {
+  users: {
+    info: (params: { user: string }) => Promise<{
+      ok: boolean;
+      user?: {
+        profile?: {
+          display_name?: string;
+          real_name?: string;
+        };
+      };
+    }>;
+  };
+}
+
+// ============================================
+// ユーザーキャッシュ
+// ============================================
+const userCache = new Map<string, UserCache>();
+
+/**
+ * キャッシュをクリア（テスト用）
+ */
+export function clearUserCache(): void {
+  userCache.clear();
+}
+
+/**
+ * ユーザーIDから表示名を取得
+ * キャッシュがあればキャッシュから、なければSlack APIから取得
+ */
+export async function getUserDisplayName(
+  client: SlackClient,
+  userId: string
+): Promise<string> {
+  // キャッシュ確認
+  const cached = userCache.get(userId);
+  if (cached) {
+    return cached.displayName;
+  }
+
+  try {
+    const result = await client.users.info({ user: userId });
+    const profile = result.user?.profile;
+    const displayName = profile?.display_name || profile?.real_name || 'Unknown User';
+
+    // 空文字の場合も "Unknown User" にフォールバック
+    const finalName = displayName || 'Unknown User';
+
+    // キャッシュに保存
+    userCache.set(userId, { displayName: finalName });
+
+    return finalName;
+  } catch (error) {
+    console.error(`Failed to fetch user info for ${userId}:`, error);
+    return 'Unknown User';
+  }
 }
 
 // ============================================
@@ -126,7 +191,7 @@ async function main(): Promise<void> {
   });
 
   // メッセージイベントをリッスン
-  slackApp.event('message', async ({ event }) => {
+  slackApp.event('message', async ({ event, client }) => {
     // 対象チャンネルかつ対象スレッドのメッセージのみ処理
     if (event.channel !== channelId) return;
     if (!('thread_ts' in event) || event.thread_ts !== threadTs) return;
@@ -134,12 +199,19 @@ async function main(): Promise<void> {
     // サブタイプがあるメッセージ（編集、削除等）はスキップ
     if ('subtype' in event && event.subtype) return;
 
+    // ユーザーIDを取得（型安全に）
+    const userId = 'user' in event ? event.user : undefined;
+    if (!userId) return;
+
     // textプロパティを安全に取得
     const text = sanitizeMessage('text' in event ? event.text : undefined);
     if (!text) return; // 空メッセージはスキップ
 
-    console.log(`New comment: ${text}`);
-    broadcast({ text });
+    // ユーザー名を取得
+    const userName = await getUserDisplayName(client as SlackClient, userId);
+
+    console.log(`New comment from ${userName}: ${text}`);
+    broadcast({ text, userName });
   });
 
   // サーバー起動
@@ -154,7 +226,10 @@ async function main(): Promise<void> {
   });
 }
 
-main().catch((err: unknown) => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// テスト時は main() を実行しない
+if (!process.env['VITEST']) {
+  main().catch((err: unknown) => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}
