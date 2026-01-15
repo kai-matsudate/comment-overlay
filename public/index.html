@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Comment Overlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -16,7 +19,7 @@
       height: 100vh;
       overflow: hidden;
       background: transparent;
-      font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      font-family: 'Noto Sans JP', sans-serif;
     }
 
     .comment {
@@ -32,6 +35,12 @@
         2px 2px 0 #000;
       will-change: transform;
       animation: flow 8s linear forwards;
+    }
+
+    .user-name {
+      font-size: 0.65em;
+      opacity: 0.75;
+      margin-right: 0.5em;
     }
 
     @keyframes flow {
@@ -64,8 +73,8 @@
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        if (data.text) {
-          showComment(data.text);
+        if (data.text && data.userName) {
+          showComment(data.userName, data.text);
         }
       };
 
@@ -81,10 +90,18 @@
     }
 
     // コメント表示
-    function showComment(text) {
+    function showComment(userName, text) {
       const comment = document.createElement('div');
       comment.className = 'comment';
-      comment.textContent = text;
+
+      // 投稿者名（控えめに表示）
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'user-name';
+      nameSpan.textContent = userName;
+      comment.appendChild(nameSpan);
+
+      // コメントテキスト
+      comment.appendChild(document.createTextNode(text));
 
       // Y座標: 画面高さの10%〜90%でランダム
       const minY = window.innerHeight * 0.1;
