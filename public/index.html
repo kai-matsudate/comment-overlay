@@ -28,7 +28,7 @@
       flex-direction: column;
       font-size: 32px;
       font-weight: bold;
-      color: #ffffff;
+      /* color is set dynamically via JavaScript */
       text-shadow:
         -2px -2px 0 #000,
         2px -2px 0 #000,
@@ -46,7 +46,7 @@
       align-self: flex-end;
       font-size: 0.5em;
       opacity: 0.6;
-      margin-top: 0.2em;
+      margin-top: 0;
     }
 
     @keyframes flow {
@@ -80,7 +80,7 @@
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.text && data.userName) {
-          showComment(data.userName, data.text);
+          showComment(data.userName, data.text, data.userColor || '#ffffff');
         }
       };
 
@@ -96,9 +96,10 @@
     }
 
     // コメント表示
-    function showComment(userName, text) {
+    function showComment(userName, text, userColor) {
       const comment = document.createElement('div');
       comment.className = 'comment';
+      comment.style.color = userColor;
 
       // コメントテキスト
       const textSpan = document.createElement('span');

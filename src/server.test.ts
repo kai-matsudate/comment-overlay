@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { getUserDisplayName, clearUserCache, type SlackClient } from './server.js';
+import { getUserDisplayName, clearUserCache, generateUserColor, type SlackClient } from './server.js';
 
 // モック用のヘルパー関数
 function createMockClient(): SlackClient & { users: { info: Mock } } {
@@ -93,5 +93,29 @@ describe('getUserDisplayName', () => {
     const result = await getUserDisplayName(mockClient, 'U123456');
 
     expect(result).toBe('Unknown User');
+  });
+});
+
+describe('generateUserColor', () => {
+  it('should return consistent color for same userId', () => {
+    const color1 = generateUserColor('U12345');
+    const color2 = generateUserColor('U12345');
+    expect(color1).toBe(color2);
+  });
+
+  it('should return different colors for different userIds', () => {
+    const color1 = generateUserColor('U12345');
+    const color2 = generateUserColor('U67890');
+    expect(color1).not.toBe(color2);
+  });
+
+  it('should return valid HSL format', () => {
+    const color = generateUserColor('U12345');
+    expect(color).toMatch(/^hsl\(\d{1,3}, 80%, 65%\)$/);
+  });
+
+  it('should handle empty string without error', () => {
+    const color = generateUserColor('');
+    expect(color).toMatch(/^hsl\(\d{1,3}, 80%, 65%\)$/);
   });
 });

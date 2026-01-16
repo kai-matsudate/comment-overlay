@@ -22,6 +22,7 @@ interface ThreadInfo {
 interface CommentMessage {
   text: string;
   userName: string;
+  userColor: string;
 }
 
 interface UserCache {
@@ -53,6 +54,18 @@ const userCache = new Map<string, UserCache>();
  */
 export function clearUserCache(): void {
   userCache.clear();
+}
+
+/**
+ * ユーザーIDからHSL色を生成
+ * 同一ユーザーは常に同じ色を返す
+ */
+export function generateUserColor(userId: string): string {
+  let hash = 0;
+  for (const char of userId) {
+    hash = (hash + char.charCodeAt(0)) % 360;
+  }
+  return `hsl(${hash}, 80%, 65%)`;
 }
 
 /**
@@ -210,8 +223,9 @@ async function main(): Promise<void> {
     // ユーザー名を取得
     const userName = await getUserDisplayName(client as SlackClient, userId);
 
+    const userColor = generateUserColor(userId);
     console.log(`New comment from ${userName}: ${text}`);
-    broadcast({ text, userName });
+    broadcast({ text, userName, userColor });
   });
 
   // サーバー起動
