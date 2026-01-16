@@ -24,7 +24,8 @@
 
     .comment {
       position: absolute;
-      white-space: nowrap;
+      display: flex;
+      flex-direction: column;
       font-size: 32px;
       font-weight: bold;
       color: #ffffff;
@@ -37,10 +38,15 @@
       animation: flow 8s linear forwards;
     }
 
+    .comment-text {
+      white-space: nowrap;
+    }
+
     .user-name {
-      font-size: 0.65em;
-      opacity: 0.75;
-      margin-right: 0.5em;
+      align-self: flex-end;
+      font-size: 0.5em;
+      opacity: 0.6;
+      margin-top: 0.2em;
     }
 
     @keyframes flow {
@@ -94,14 +100,17 @@
       const comment = document.createElement('div');
       comment.className = 'comment';
 
-      // 投稿者名（控えめに表示）
+      // コメントテキスト
+      const textSpan = document.createElement('span');
+      textSpan.className = 'comment-text';
+      textSpan.textContent = text;
+      comment.appendChild(textSpan);
+
+      // 投稿者名（右下に控えめに表示）
       const nameSpan = document.createElement('span');
       nameSpan.className = 'user-name';
       nameSpan.textContent = userName;
       comment.appendChild(nameSpan);
-
-      // コメントテキスト
-      comment.appendChild(document.createTextNode(text));
 
       // Y座標: 画面高さの10%〜90%でランダム
       const minY = window.innerHeight * 0.1;
