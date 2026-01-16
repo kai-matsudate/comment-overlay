@@ -50,6 +50,25 @@ export interface SlackClient {
       };
     }>;
   };
+  conversations: {
+    replies: (params: {
+      channel: string;
+      ts: string;
+      limit?: number;
+      cursor?: string;
+    }) => Promise<{
+      ok: boolean;
+      messages?: Array<{
+        ts?: string;
+        thread_ts?: string;
+        user?: string;
+        text?: string;
+        subtype?: string;
+      }>;
+      has_more?: boolean;
+      response_metadata?: { next_cursor?: string };
+    }>;
+  };
 }
 
 // ============================================
@@ -77,6 +96,13 @@ export function incrementCommentCount(): number {
  */
 export function resetCommentCount(): void {
   commentCount = 0;
+}
+
+/**
+ * コメント数を指定値に設定
+ */
+export function setCommentCount(value: number): void {
+  commentCount = value;
 }
 
 // ============================================
@@ -133,6 +159,59 @@ export async function getUserDisplayName(
     console.error(`Failed to fetch user info for ${userId}:`, error);
     return 'Unknown User';
   }
+}
+
+// ============================================
+// 既存スレッドメッセージのカウント取得
+// ============================================
+
+/**
+ * 既存のスレッドメッセージ数を取得
+ * ページネーションに対応し、メッセージイベントと同じフィルタリング条件を適用
+ */
+export async function fetchInitialCommentCount(
+  client: SlackClient,
+  channelId: string,
+  threadTs: string
+): Promise<number> {
+  let count = 0;
+  let cursor: string | undefined;
+
+  try {
+    do {
+      const params: { channel: string; ts: string; limit: number; cursor?: string } = {
+        channel: channelId,
+        ts: threadTs,
+        limit: 100,
+      };
+      if (cursor) {
+        params.cursor = cursor;
+      }
+
+      const result = await client.conversations.replies(params);
+      const messages = result.messages ?? [];
+
+      for (const msg of messages) {
+        // 親メッセージを除外（ts === thread_ts）
+        if (msg.ts === threadTs) continue;
+        // subtype があるメッセージを除外
+        if (msg.subtype) continue;
+        // user がないメッセージを除外
+        if (!msg.user) continue;
+        // text が空のメッセージを除外
+        if (!msg.text) continue;
+
+        count += 1;
+      }
+
+      cursor = result.has_more ? result.response_metadata?.next_cursor : undefined;
+    } while (cursor);
+  } catch (error) {
+    console.error('Failed to fetch initial comment count:', error);
+    return 0;
+  }
+
+  return count;
 }
 
 // ============================================
@@ -275,6 +354,15 @@ async function main(): Promise<void> {
 
   await slackApp.start();
   console.log('Slack connection established (Socket Mode)');
+
+  // 既存のスレッドメッセージ数を取得してカウンターを初期化
+  const initialCount = await fetchInitialCommentCount(
+    slackApp.client as unknown as SlackClient,
+    channelId,
+    threadTs
+  );
+  setCommentCount(initialCount);
+  console.log(`Initial comment count: ${initialCount}`);
 
   httpServer.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

@@ -6,6 +6,8 @@ import {
   getCommentCount,
   incrementCommentCount,
   resetCommentCount,
+  setCommentCount,
+  fetchInitialCommentCount,
   type SlackClient,
 } from './server.js';
 
@@ -152,5 +154,167 @@ describe('Comment Counter', () => {
       resetCommentCount();
       expect(getCommentCount()).toBe(0);
     });
+  });
+
+  describe('setCommentCount', () => {
+    it('指定した値にカウントを設定する', () => {
+      setCommentCount(42);
+      expect(getCommentCount()).toBe(42);
+    });
+
+    it('0に設定できる', () => {
+      incrementCommentCount();
+      setCommentCount(0);
+      expect(getCommentCount()).toBe(0);
+    });
+  });
+});
+
+// モック用のヘルパー関数（conversations.replies を含む）
+function createMockClientWithReplies(): SlackClient & {
+  users: { info: Mock };
+  conversations: { replies: Mock };
+} {
+  return {
+    users: {
+      info: vi.fn(),
+    },
+    conversations: {
+      replies: vi.fn(),
+    },
+  };
+}
+
+describe('fetchInitialCommentCount', () => {
+  let mockClient: ReturnType<typeof createMockClientWithReplies>;
+
+  beforeEach(() => {
+    mockClient = createMockClientWithReplies();
+    resetCommentCount();
+  });
+
+  it('返信メッセージを正しくカウントする（親メッセージを除く）', async () => {
+    mockClient.conversations.replies.mockResolvedValue({
+      ok: true,
+      messages: [
+        { ts: '1705200000.000000', thread_ts: '1705200000.000000', user: 'U1', text: '親メッセージ' },
+        { ts: '1705200001.000001', thread_ts: '1705200000.000000', user: 'U2', text: '返信1' },
+        { ts: '1705200002.000002', thread_ts: '1705200000.000000', user: 'U3', text: '返信2' },
+      ],
+      has_more: false,
+    });
+
+    const count = await fetchInitialCommentCount(mockClient, 'C123', '1705200000.000000');
+
+    expect(count).toBe(2); // 親を除いた返信のみ
+    expect(mockClient.conversations.replies).toHaveBeenCalledWith({
+      channel: 'C123',
+      ts: '1705200000.000000',
+      limit: 100,
+    });
+  });
+
+  it('subtype ありのメッセージを除外する', async () => {
+    mockClient.conversations.replies.mockResolvedValue({
+      ok: true,
+      messages: [
+        { ts: '1705200000.000000', thread_ts: '1705200000.000000', user: 'U1', text: '親' },
+        { ts: '1705200001.000001', thread_ts: '1705200000.000000', user: 'U2', text: '通常返信' },
+        { ts: '1705200002.000002', thread_ts: '1705200000.000000', user: 'U3', text: '編集済み', subtype: 'message_changed' },
+      ],
+      has_more: false,
+    });
+
+    const count = await fetchInitialCommentCount(mockClient, 'C123', '1705200000.000000');
+
+    expect(count).toBe(1); // subtype ありを除外
+  });
+
+  it('user なしのメッセージを除外する', async () => {
+    mockClient.conversations.replies.mockResolvedValue({
+      ok: true,
+      messages: [
+        { ts: '1705200000.000000', thread_ts: '1705200000.000000', user: 'U1', text: '親' },
+        { ts: '1705200001.000001', thread_ts: '1705200000.000000', user: 'U2', text: '通常返信' },
+        { ts: '1705200002.000002', thread_ts: '1705200000.000000', text: 'ボットメッセージ' },
+      ],
+      has_more: false,
+    });
+
+    const count = await fetchInitialCommentCount(mockClient, 'C123', '1705200000.000000');
+
+    expect(count).toBe(1); // user なしを除外
+  });
+
+  it('空の text を除外する', async () => {
+    mockClient.conversations.replies.mockResolvedValue({
+      ok: true,
+      messages: [
+        { ts: '1705200000.000000', thread_ts: '1705200000.000000', user: 'U1', text: '親' },
+        { ts: '1705200001.000001', thread_ts: '1705200000.000000', user: 'U2', text: '通常返信' },
+        { ts: '1705200002.000002', thread_ts: '1705200000.000000', user: 'U3', text: '' },
+        { ts: '1705200003.000003', thread_ts: '1705200000.000000', user: 'U4' }, // text がない
+      ],
+      has_more: false,
+    });
+
+    const count = await fetchInitialCommentCount(mockClient, 'C123', '1705200000.000000');
+
+    expect(count).toBe(1); // 空 text を除外
+  });
+
+  it('ページネーションを処理する', async () => {
+    // 1ページ目
+    mockClient.conversations.replies.mockResolvedValueOnce({
+      ok: true,
+      messages: [
+        { ts: '1705200000.000000', thread_ts: '1705200000.000000', user: 'U1', text: '親' },
+        { ts: '1705200001.000001', thread_ts: '1705200000.000000', user: 'U2', text: '返信1' },
+      ],
+      has_more: true,
+      response_metadata: { next_cursor: 'cursor123' },
+    });
+    // 2ページ目
+    mockClient.conversations.replies.mockResolvedValueOnce({
+      ok: true,
+      messages: [
+        { ts: '1705200002.000002', thread_ts: '1705200000.000000', user: 'U3', text: '返信2' },
+        { ts: '1705200003.000003', thread_ts: '1705200000.000000', user: 'U4', text: '返信3' },
+      ],
+      has_more: false,
+    });
+
+    const count = await fetchInitialCommentCount(mockClient, 'C123', '1705200000.000000');
+
+    expect(count).toBe(3); // 全ページの返信をカウント
+    expect(mockClient.conversations.replies).toHaveBeenCalledTimes(2);
+    expect(mockClient.conversations.replies).toHaveBeenNthCalledWith(2, {
+      channel: 'C123',
+      ts: '1705200000.000000',
+      limit: 100,
+      cursor: 'cursor123',
+    });
+  });
+
+  it('APIエラー時は0を返す', async () => {
+    mockClient.conversations.replies.mockRejectedValue(new Error('API Error'));
+
+    const count = await fetchInitialCommentCount(mockClient, 'C123', '1705200000.000000');
+
+    expect(count).toBe(0);
+  });
+
+  it('空のスレッドは0を返す', async () => {
+    mockClient.conversations.replies.mockResolvedValue({
+      ok: true,
+      messages: [
+        { ts: '1705200000.000000', thread_ts: '1705200000.000000', user: 'U1', text: '親メッセージのみ' },
+      ],
+      has_more: false,
+    });
+
+    const count = await fetchInitialCommentCount(mockClient, 'C123', '1705200000.000000');
+
+    expect(count).toBe(0); // 返信なし
   });
 });

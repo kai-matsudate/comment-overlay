@@ -81,6 +81,15 @@
 <body>
   <div id="comment-counter">💬 0</div>
   <script>
+    // レーン管理定数
+    const LANE_COUNT = 10;
+    const USABLE_RANGE_START = 0.1;
+    const USABLE_RANGE_END = 0.9;
+    const FLOW_DURATION = 8; // CSSアニメーションの秒数
+
+    // レーン状態: 各要素は使用中の場合タイムスタンプ、空きの場合null
+    let lanes = new Array(LANE_COUNT).fill(null);
+
     // WebSocket接続
     let ws;
     let reconnectTimer;
@@ -143,6 +152,49 @@
       return 24;
     }
 
+    // レーンのY座標を計算
+    function getLaneY(laneIndex) {
+      const usableHeight = window.innerHeight * (USABLE_RANGE_END - USABLE_RANGE_START);
+      const laneHeight = usableHeight / LANE_COUNT;
+      const startY = window.innerHeight * USABLE_RANGE_START;
+      return startY + laneHeight * (laneIndex + 0.5);
+    }
+
+    // 空きレーンのインデックス一覧を取得
+    function getAvailableLanes() {
+      const available = [];
+      for (let i = 0; i < lanes.length; i++) {
+        if (lanes[i] === null) {
+          available.push(i);
+        }
+      }
+      return available;
+    }
+
+    // 最古のレーンのインデックスを取得
+    function findOldestLane() {
+      let oldestIndex = 0;
+      let oldestTimestamp = Infinity;
+      for (let i = 0; i < lanes.length; i++) {
+        const timestamp = lanes[i];
+        if (timestamp !== null && timestamp < oldestTimestamp) {
+          oldestTimestamp = timestamp;
+          oldestIndex = i;
+        }
+      }
+      return oldestIndex;
+    }
+
+    // 使用するレーンを選択
+    function selectLane() {
+      const available = getAvailableLanes();
+      if (available.length > 0) {
+        const randomIndex = Math.floor(Math.random() * available.length);
+        return available[randomIndex];
+      }
+      return findOldestLane();
+    }
+
     // コメント表示
     function showComment(userName, text, userColor) {
       const comment = document.createElement('div');
@@ -165,11 +217,22 @@
       nameSpan.textContent = userName;
       comment.appendChild(nameSpan);
 
-      // Y座標: 画面高さの10%〜90%でランダム
-      const minY = window.innerHeight * 0.1;
-      const maxY = window.innerHeight * 0.9;
-      const y = Math.random() * (maxY - minY) + minY;
+      // レーンを選択してY座標を設定
+      const laneIndex = selectLane();
+      const y = getLaneY(laneIndex);
       comment.style.top = `${y}px`;
+
+      // レーンを占有
+      const now = Date.now();
+      lanes[laneIndex] = now;
+
+      // 一定時間後にレーンを解放（コメントが画面中央を過ぎた頃）
+      setTimeout(() => {
+        // 同じタイムスタンプの場合のみ解放（上書きされていない場合）
+        if (lanes[laneIndex] === now) {
+          lanes[laneIndex] = null;
+        }
+      }, (FLOW_DURATION / 2) * 1000);
 
       document.body.appendChild(comment);
 
