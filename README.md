@@ -38,6 +38,8 @@ SlackスレッドのコメントをOBSでニコニコ動画風にオーバーレ
 2. **Scopes** セクションの **Bot Token Scopes** に以下を追加:
    - `channels:history`
    - `groups:history`
+   - `emoji:read`
+   - `users:read`
 3. ページ上部の **Install to Workspace** をクリック
 4. 許可画面で **許可する** をクリック
 5. 表示された `xoxb-` で始まるトークンをメモ
