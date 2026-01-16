@@ -526,7 +526,22 @@ async function main(): Promise<void> {
   const httpServer = createServer(expressApp);
 
   // WebSocket サーバー
-  const wss = new WebSocketServer({ server: httpServer });
+  // セキュリティ: Originヘッダーを検証してlocalhostからの接続のみ許可
+  const wss = new WebSocketServer({
+    server: httpServer,
+    verifyClient: (info: { origin?: string }) => {
+      const origin = info.origin ?? '';
+      // localhost、127.0.0.1、file://（Electron）からの接続を許可
+      const allowedOrigins = [
+        /^https?:\/\/localhost(:\d+)?$/,
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+        /^file:\/\//,
+      ];
+      // Originヘッダーがない場合（同一オリジン）も許可
+      if (!origin) return true;
+      return allowedOrigins.some((pattern) => pattern.test(origin));
+    },
+  });
   const clients = new Set<WebSocket>();
 
   wss.on('connection', (ws: WebSocket) => {

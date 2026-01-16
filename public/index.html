@@ -184,6 +184,13 @@
         const emojiUrl = emojis[emojiName];
 
         if (emojiUrl) {
+          // セキュリティ: https/httpスキームのみ許可（XSS対策）
+          if (!emojiUrl.startsWith('https://') && !emojiUrl.startsWith('http://')) {
+            fragment.appendChild(document.createTextNode(match[0]));
+            lastIndex = match.index + match[0].length;
+            continue;
+          }
+
           // 絵文字画像を作成
           const img = document.createElement('img');
           img.src = emojiUrl;

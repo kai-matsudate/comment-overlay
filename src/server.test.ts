@@ -942,3 +942,88 @@ describe('Slack special notation processing', () => {
     });
   });
 });
+
+// ============================================
+// セキュリティテスト
+// ============================================
+describe('Security: XSS Prevention', () => {
+  describe('processMessage XSS resistance', () => {
+    it('HTMLタグを含むメッセージがサニタイズされる', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('<script>alert(1)</script>', emojiMap);
+      // 山括弧タグは除去される
+      expect(result.sanitizedText).not.toContain('<script>');
+      expect(result.sanitizedText).not.toContain('</script>');
+    });
+
+    it('imgタグがサニタイズされる', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('<img src=x onerror=alert(1)>', emojiMap);
+      expect(result.sanitizedText).not.toContain('<img');
+      expect(result.sanitizedText).not.toContain('onerror');
+    });
+
+    it('イベントハンドラを含むタグがサニタイズされる', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('<div onclick="alert(1)">Click me</div>', emojiMap);
+      expect(result.sanitizedText).not.toContain('onclick');
+      expect(result.sanitizedText).not.toContain('<div');
+    });
+
+    it('javascript: URLスキームがリンク処理で[リンク]に変換されない', () => {
+      const emojiMap = new Map<string, string>();
+      // javascript: スキームはhttps?ではないので[リンク]に変換されず、タグが除去される
+      const result = processMessage('<javascript:alert(1)>', emojiMap);
+      expect(result.sanitizedText).not.toContain('javascript:');
+    });
+
+    it('data: URLスキームがリンク処理で[リンク]に変換されない', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('<data:text/html,<script>alert(1)</script>>', emojiMap);
+      expect(result.sanitizedText).not.toContain('data:');
+    });
+
+    it('SVGを使ったXSS攻撃パターンがサニタイズされる', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('<svg onload="alert(1)">', emojiMap);
+      expect(result.sanitizedText).not.toContain('<svg');
+      expect(result.sanitizedText).not.toContain('onload');
+    });
+
+    it('iframeタグがサニタイズされる', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('<iframe src="javascript:alert(1)"></iframe>', emojiMap);
+      expect(result.sanitizedText).not.toContain('<iframe');
+    });
+  });
+
+  describe('Emoji URL validation', () => {
+    it('正常なhttps URLの絵文字はマップに含まれる', () => {
+      const emojiMap = new Map([
+        ['thumbsup', 'https://example.com/thumbsup.png'],
+      ]);
+      const result = processMessage(':thumbsup:', emojiMap);
+      expect(result.emojis['thumbsup']).toBe('https://example.com/thumbsup.png');
+    });
+
+    it('正常なhttp URLの絵文字はマップに含まれる', () => {
+      const emojiMap = new Map([
+        ['wave', 'http://example.com/wave.gif'],
+      ]);
+      const result = processMessage(':wave:', emojiMap);
+      expect(result.emojis['wave']).toBe('http://example.com/wave.gif');
+    });
+
+    it('絵文字URLにjavascript:スキームは使用できない（フロントエンド側で検証）', () => {
+      // 注: このテストはサーバー側でURL検証を行わないことを確認
+      // フロントエンドのindex.htmlでhttps/httpのみ許可する検証を行う
+      const emojiMap = new Map([
+        ['malicious', 'javascript:alert(1)'],
+      ]);
+      const result = processMessage(':malicious:', emojiMap);
+      // サーバー側はURLをそのままマップに含める（フロントエンドで検証）
+      expect(result.emojis['malicious']).toBe('javascript:alert(1)');
+      // 重要: フロントエンドでこのURLは拒否される
+    });
+  });
+});
