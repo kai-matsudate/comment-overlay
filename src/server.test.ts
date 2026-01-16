@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import {
   getUserDisplayName,
   clearUserCache,
@@ -8,6 +8,8 @@ import {
   resetCommentCount,
   setCommentCount,
   fetchInitialCommentCount,
+  getEmojiList,
+  clearEmojiCache,
   type SlackClient,
 } from './server.js';
 
@@ -17,7 +19,31 @@ function createMockClient(): SlackClient & { users: { info: Mock } } {
     users: {
       info: vi.fn(),
     },
-  } as SlackClient & { users: { info: Mock } };
+    conversations: {
+      replies: vi.fn(),
+    },
+    emoji: {
+      list: vi.fn(),
+    },
+  };
+}
+
+// 絵文字APIを含むモッククライアント
+function createMockClientWithEmoji(): SlackClient & {
+  users: { info: Mock };
+  emoji: { list: Mock };
+} {
+  return {
+    users: {
+      info: vi.fn(),
+    },
+    conversations: {
+      replies: vi.fn(),
+    },
+    emoji: {
+      list: vi.fn(),
+    },
+  };
 }
 
 describe('getUserDisplayName', () => {
@@ -182,6 +208,9 @@ function createMockClientWithReplies(): SlackClient & {
     conversations: {
       replies: vi.fn(),
     },
+    emoji: {
+      list: vi.fn(),
+    },
   };
 }
 
@@ -316,5 +345,94 @@ describe('fetchInitialCommentCount', () => {
     const count = await fetchInitialCommentCount(mockClient, 'C123', '1705200000.000000');
 
     expect(count).toBe(0); // 返信なし
+  });
+});
+
+describe('getEmojiList', () => {
+  let mockClient: ReturnType<typeof createMockClientWithEmoji>;
+
+  beforeEach(() => {
+    clearEmojiCache();
+    mockClient = createMockClientWithEmoji();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('APIから絵文字リストを取得する', async () => {
+    mockClient.emoji.list.mockResolvedValue({
+      ok: true,
+      emoji: {
+        thumbsup_custom: 'https://emoji.slack-edge.com/T123/thumbsup_custom/abc123.png',
+        wave: 'https://emoji.slack-edge.com/T123/wave/def456.gif',
+      },
+    });
+
+    const result = await getEmojiList(mockClient);
+
+    expect(result.get('thumbsup_custom')).toBe('https://emoji.slack-edge.com/T123/thumbsup_custom/abc123.png');
+    expect(result.get('wave')).toBe('https://emoji.slack-edge.com/T123/wave/def456.gif');
+    expect(mockClient.emoji.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('キャッシュがTTL内なら再取得しない', async () => {
+    mockClient.emoji.list.mockResolvedValue({
+      ok: true,
+      emoji: {
+        test: 'https://example.com/test.png',
+      },
+    });
+
+    // 1回目の呼び出し
+    await getEmojiList(mockClient);
+    // 30分後（TTL内）
+    vi.advanceTimersByTime(30 * 60 * 1000);
+    // 2回目の呼び出し
+    await getEmojiList(mockClient);
+
+    expect(mockClient.emoji.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('キャッシュがTTL超過なら再取得する', async () => {
+    mockClient.emoji.list.mockResolvedValue({
+      ok: true,
+      emoji: {
+        test: 'https://example.com/test.png',
+      },
+    });
+
+    // 1回目の呼び出し
+    await getEmojiList(mockClient);
+    // 61分後（TTL超過）
+    vi.advanceTimersByTime(61 * 60 * 1000);
+    // 2回目の呼び出し
+    await getEmojiList(mockClient);
+
+    expect(mockClient.emoji.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('APIエラー時は空マップを返す', async () => {
+    mockClient.emoji.list.mockRejectedValue(new Error('API Error'));
+
+    const result = await getEmojiList(mockClient);
+
+    expect(result.size).toBe(0);
+  });
+
+  it('エイリアス絵文字は除外する', async () => {
+    mockClient.emoji.list.mockResolvedValue({
+      ok: true,
+      emoji: {
+        real_emoji: 'https://example.com/real.png',
+        alias_emoji: 'alias:real_emoji',
+      },
+    });
+
+    const result = await getEmojiList(mockClient);
+
+    expect(result.get('real_emoji')).toBe('https://example.com/real.png');
+    expect(result.has('alias_emoji')).toBe(false);
   });
 });
