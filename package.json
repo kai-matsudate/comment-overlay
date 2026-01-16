@@ -10,7 +10,10 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "electron:build": "tsc -p tsconfig.electron.json && cp electron/package.json dist/electron/",
+    "electron": "npm run electron:build && electron dist/electron/main.js",
+    "dev:overlay": "./scripts/dev-overlay.sh"
   },
   "dependencies": {
     "@slack/bolt": "^3.17.0",
@@ -21,6 +24,8 @@
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",
+    "concurrently": "^9.2.1",
+    "electron": "^33.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
