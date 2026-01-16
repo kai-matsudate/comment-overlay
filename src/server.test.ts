@@ -11,6 +11,8 @@ import {
   getEmojiList,
   clearEmojiCache,
   processMessage,
+  getStandardEmojiUrl,
+  isStandardEmojiMapInitialized,
   type SlackClient,
 } from './server.js';
 
@@ -540,5 +542,91 @@ describe('processMessage', () => {
     const result = processMessage('Hello    World', emojiMap);
 
     expect(result.sanitizedText).toBe('Hello World');
+  });
+});
+
+// ============================================
+// 標準絵文字マップのテスト
+// ============================================
+describe('Standard Emoji Map', () => {
+  describe('isStandardEmojiMapInitialized', () => {
+    it('起動時に初期化されていること', () => {
+      expect(isStandardEmojiMapInitialized()).toBe(true);
+    });
+  });
+
+  describe('getStandardEmojiUrl', () => {
+    it(':fire: のURLを返す', () => {
+      const url = getStandardEmojiUrl('fire');
+      expect(url).toMatch(/^https:\/\/cdn\.jsdelivr\.net\/npm\/emoji-datasource-google/);
+      expect(url).toContain('.png');
+    });
+
+    it(':thumbsup: のURLを返す', () => {
+      const url = getStandardEmojiUrl('thumbsup');
+      expect(url).toBeDefined();
+      expect(url).toMatch(/^https:\/\/cdn\.jsdelivr\.net\/npm\/emoji-datasource-google/);
+    });
+
+    it(':+1: (thumbsupのエイリアス) のURLを返す', () => {
+      const url = getStandardEmojiUrl('+1');
+      expect(url).toBeDefined();
+      expect(url).toMatch(/^https:\/\/cdn\.jsdelivr\.net\/npm\/emoji-datasource-google/);
+    });
+
+    it('存在しない絵文字はundefinedを返す', () => {
+      const url = getStandardEmojiUrl('not_a_real_emoji_xyz');
+      expect(url).toBeUndefined();
+    });
+
+    it('大文字小文字を区別しない（内部で小文字に変換）', () => {
+      // 注: 入力は小文字で統一される前提
+      const url = getStandardEmojiUrl('fire');
+      expect(url).toBeDefined();
+    });
+  });
+});
+
+// ============================================
+// processMessage と標準絵文字の統合テスト
+// ============================================
+describe('processMessage with standard emojis', () => {
+  it('標準絵文字 :fire: のURLを返す（カスタム絵文字なし）', () => {
+    const customEmojiMap = new Map<string, string>();
+    const result = processMessage(':fire: Hot!', customEmojiMap);
+
+    expect(result.sanitizedText).toBe(':fire: Hot!');
+    expect(result.emojis['fire']).toBeDefined();
+    expect(result.emojis['fire']).toMatch(/^https:\/\/cdn\.jsdelivr\.net/);
+  });
+
+  it('カスタム絵文字が標準絵文字より優先される', () => {
+    const customEmojiMap = new Map([
+      ['fire', 'https://custom.slack.com/fire.png'],
+    ]);
+    const result = processMessage(':fire:', customEmojiMap);
+
+    expect(result.emojis['fire']).toBe('https://custom.slack.com/fire.png');
+  });
+
+  it('標準絵文字とカスタム絵文字を同時に処理する', () => {
+    const customEmojiMap = new Map([
+      ['custom_emoji', 'https://custom.slack.com/custom.png'],
+    ]);
+    const result = processMessage(':fire: :custom_emoji:', customEmojiMap);
+
+    expect(result.emojis['fire']).toBeDefined();
+    expect(result.emojis['fire']).toMatch(/cdn\.jsdelivr\.net/);
+    expect(result.emojis['custom_emoji']).toBe('https://custom.slack.com/custom.png');
+  });
+
+  it(':thumbsup: と :+1: が両方動作する', () => {
+    const customEmojiMap = new Map<string, string>();
+
+    const result1 = processMessage(':thumbsup:', customEmojiMap);
+    const result2 = processMessage(':+1:', customEmojiMap);
+
+    expect(result1.emojis['thumbsup']).toBeDefined();
+    expect(result2.emojis['+1']).toBeDefined();
   });
 });

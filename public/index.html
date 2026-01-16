@@ -180,7 +180,7 @@
           fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
         }
 
-        const emojiName = match[1];
+        const emojiName = match[1]?.toLowerCase();
         const emojiUrl = emojis[emojiName];
 
         if (emojiUrl) {
