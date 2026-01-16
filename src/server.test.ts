@@ -10,6 +10,7 @@ import {
   fetchInitialCommentCount,
   getEmojiList,
   clearEmojiCache,
+  processMessage,
   type SlackClient,
 } from './server.js';
 
@@ -434,5 +435,110 @@ describe('getEmojiList', () => {
 
     expect(result.get('real_emoji')).toBe('https://example.com/real.png');
     expect(result.has('alias_emoji')).toBe(false);
+  });
+});
+
+describe('processMessage', () => {
+  it('絵文字なしテキストはそのまま返す', () => {
+    const emojiMap = new Map<string, string>();
+    const result = processMessage('Hello World', emojiMap);
+
+    expect(result.sanitizedText).toBe('Hello World');
+    expect(result.emojis).toEqual({});
+  });
+
+  it('カスタム絵文字を検出しURLマップを返す', () => {
+    const emojiMap = new Map([
+      ['thumbsup', 'https://example.com/thumbsup.png'],
+    ]);
+    const result = processMessage('Good job :thumbsup:', emojiMap);
+
+    expect(result.sanitizedText).toBe('Good job :thumbsup:');
+    expect(result.emojis).toEqual({
+      thumbsup: 'https://example.com/thumbsup.png',
+    });
+  });
+
+  it('複数の絵文字を正しく処理する', () => {
+    const emojiMap = new Map([
+      ['wave', 'https://example.com/wave.gif'],
+      ['smile', 'https://example.com/smile.png'],
+    ]);
+    const result = processMessage(':wave: Hello :smile:', emojiMap);
+
+    expect(result.sanitizedText).toBe(':wave: Hello :smile:');
+    expect(result.emojis).toEqual({
+      wave: 'https://example.com/wave.gif',
+      smile: 'https://example.com/smile.png',
+    });
+  });
+
+  it('存在しない絵文字はURLマップに含めない', () => {
+    const emojiMap = new Map([
+      ['wave', 'https://example.com/wave.gif'],
+    ]);
+    const result = processMessage(':wave: :nonexistent:', emojiMap);
+
+    expect(result.sanitizedText).toBe(':wave: :nonexistent:');
+    expect(result.emojis).toEqual({
+      wave: 'https://example.com/wave.gif',
+    });
+    expect(result.emojis['nonexistent']).toBeUndefined();
+  });
+
+  it('メンション・リンクは引き続き除去する', () => {
+    const emojiMap = new Map([
+      ['thumbsup', 'https://example.com/thumbsup.png'],
+    ]);
+    const result = processMessage(
+      '<@U12345> Check this <http://example.com|link> :thumbsup:',
+      emojiMap
+    );
+
+    expect(result.sanitizedText).toBe('Check this link :thumbsup:');
+    expect(result.emojis).toEqual({
+      thumbsup: 'https://example.com/thumbsup.png',
+    });
+  });
+
+  it('同じ絵文字が複数回出現しても一度だけマップに含める', () => {
+    const emojiMap = new Map([
+      ['fire', 'https://example.com/fire.gif'],
+    ]);
+    const result = processMessage(':fire: Hot! :fire: :fire:', emojiMap);
+
+    expect(result.sanitizedText).toBe(':fire: Hot! :fire: :fire:');
+    expect(Object.keys(result.emojis)).toHaveLength(1);
+    expect(result.emojis['fire']).toBe('https://example.com/fire.gif');
+  });
+
+  it('空文字列を正しく処理する', () => {
+    const emojiMap = new Map<string, string>();
+    const result = processMessage('', emojiMap);
+
+    expect(result.sanitizedText).toBe('');
+    expect(result.emojis).toEqual({});
+  });
+
+  it('undefinedを空文字列として処理する', () => {
+    const emojiMap = new Map<string, string>();
+    const result = processMessage(undefined, emojiMap);
+
+    expect(result.sanitizedText).toBe('');
+    expect(result.emojis).toEqual({});
+  });
+
+  it('リンク（表示テキストなし）を除去する', () => {
+    const emojiMap = new Map<string, string>();
+    const result = processMessage('Check <http://example.com>', emojiMap);
+
+    expect(result.sanitizedText).toBe('Check');
+  });
+
+  it('連続空白を1つにまとめる', () => {
+    const emojiMap = new Map<string, string>();
+    const result = processMessage('Hello    World', emojiMap);
+
+    expect(result.sanitizedText).toBe('Hello World');
   });
 });

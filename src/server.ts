@@ -321,6 +321,57 @@ function sanitizeMessage(text: string | undefined): string {
 }
 
 // ============================================
+// メッセージ処理（絵文字URL抽出付き）
+// ============================================
+export interface ProcessedMessage {
+  sanitizedText: string;
+  emojis: Record<string, string>;
+}
+
+/**
+ * メッセージを処理し、サニタイズされたテキストと絵文字URLマップを返す
+ * - メンション、リンクを除去
+ * - 絵文字はテキスト内に保持し、URLマップを生成
+ */
+export function processMessage(
+  text: string | undefined,
+  emojiMap: Map<string, string>
+): ProcessedMessage {
+  if (!text) {
+    return { sanitizedText: '', emojis: {} };
+  }
+
+  // メンション・リンクを除去（絵文字は保持）
+  const sanitizedText = text
+    // メンション <@U1234567890> → 除去
+    .replace(/<@[A-Z0-9]+>/gi, '')
+    // リンク <http://example.com|表示テキスト> → 表示テキスト
+    .replace(/<([^|>]+)\|([^>]+)>/g, '$2')
+    // リンク（表示テキストなし）<http://example.com> → 除去
+    .replace(/<[^>]+>/g, '')
+    // 連続空白を1つに
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // 絵文字パターンを抽出してURLマップを生成
+  const emojiPattern = /:([a-z0-9_+-]+):/gi;
+  const emojis: Record<string, string> = {};
+
+  let match;
+  while ((match = emojiPattern.exec(sanitizedText)) !== null) {
+    const emojiName = match[1];
+    if (emojiName) {
+      const url = emojiMap.get(emojiName);
+      if (url) {
+        emojis[emojiName] = url;
+      }
+    }
+  }
+
+  return { sanitizedText, emojis };
+}
+
+// ============================================
 // メイン処理
 // ============================================
 async function main(): Promise<void> {
