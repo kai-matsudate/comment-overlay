@@ -2,6 +2,7 @@
   "name": "comment-preview",
   "version": "1.0.0",
   "description": "Slack thread comments overlay for OBS",
+  "license": "MIT",
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
