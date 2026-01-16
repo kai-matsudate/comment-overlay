@@ -57,9 +57,29 @@
         transform: translateX(-100%);
       }
     }
+
+    #comment-counter {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 16px;
+      border-radius: 8px;
+      z-index: 1000;
+      font-family: 'Noto Sans JP', sans-serif;
+      text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000;
+    }
   </style>
 </head>
 <body>
+  <div id="comment-counter">💬 0</div>
   <script>
     // WebSocket接続
     let ws;
@@ -79,6 +99,14 @@
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+
+        // カウンターメッセージの処理
+        if (data.type === 'counter') {
+          updateCounter(data.count);
+          return;
+        }
+
+        // コメントメッセージの処理（後方互換性維持）
         if (data.text && data.userName) {
           showComment(data.userName, data.text, data.userColor || '#ffffff');
         }
@@ -93,6 +121,14 @@
         console.error('WebSocket error:', err);
         ws.close();
       };
+    }
+
+    // カウンター更新
+    function updateCounter(count) {
+      const counter = document.getElementById('comment-counter');
+      if (counter) {
+        counter.textContent = `💬 ${count}`;
+      }
     }
 
     // フォントサイズ決定
