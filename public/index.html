@@ -169,8 +169,8 @@
         return fragment;
       }
 
-      // 絵文字パターンでテキストを分割
-      const emojiPattern = /:([a-z0-9_+-]+):/gi;
+      // 絵文字パターンでテキストを分割 (日本語文字をサポート)
+      const emojiPattern = /:([a-z0-9_+\-\u3000-\u9fff\u30a0-\u30ff\u3040-\u309f\uff00-\uffef]+):/gi;
       let lastIndex = 0;
       let match;
 

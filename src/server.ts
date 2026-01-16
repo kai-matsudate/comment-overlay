@@ -377,8 +377,8 @@ function sanitizeMessage(text: string | undefined): string {
     .replace(/<([^|>]+)\|([^>]+)>/g, '$2')
     // リンク（表示テキストなし）<http://example.com> → 除去
     .replace(/<[^>]+>/g, '')
-    // カスタム絵文字 :emoji_name: → 除去
-    .replace(/:[a-z0-9_+-]+:/gi, '')
+    // カスタム絵文字 :emoji_name: → 除去 (日本語文字をサポート)
+    .replace(/:[a-z0-9_+\-\u3000-\u9fff\u30a0-\u30ff\u3040-\u309f\uff00-\uffef]+:/gi, '')
     // 連続空白を1つに
     .replace(/\s+/g, ' ')
     .trim();
@@ -417,8 +417,8 @@ export function processMessage(
     .replace(/\s+/g, ' ')
     .trim();
 
-  // 絵文字パターンを抽出してURLマップを生成
-  const emojiPattern = /:([a-z0-9_+-]+):/gi;
+  // 絵文字パターンを抽出してURLマップを生成 (日本語文字をサポート)
+  const emojiPattern = /:([a-z0-9_+\-\u3000-\u9fff\u30a0-\u30ff\u3040-\u309f\uff00-\uffef]+):/gi;
   const emojis: Record<string, string> = {};
 
   let match;

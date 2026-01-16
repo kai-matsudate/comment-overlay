@@ -530,6 +530,105 @@ describe('processMessage', () => {
     expect(result.emojis).toEqual({});
   });
 
+  // ============================================
+  // 日本語カスタム絵文字のテスト
+  // ============================================
+  describe('Japanese custom emoji names', () => {
+    it('漢字のみの絵文字名を検出する', () => {
+      const emojiMap = new Map([
+        ['日本語', 'https://example.com/nihongo.png'],
+      ]);
+      const result = processMessage(':日本語:', emojiMap);
+
+      expect(result.sanitizedText).toBe(':日本語:');
+      expect(result.emojis).toEqual({
+        日本語: 'https://example.com/nihongo.png',
+      });
+    });
+
+    it('ひらがなのみの絵文字名を検出する', () => {
+      const emojiMap = new Map([
+        ['ありがとう', 'https://example.com/arigatou.png'],
+      ]);
+      const result = processMessage(':ありがとう:', emojiMap);
+
+      expect(result.sanitizedText).toBe(':ありがとう:');
+      expect(result.emojis).toEqual({
+        ありがとう: 'https://example.com/arigatou.png',
+      });
+    });
+
+    it('カタカナのみの絵文字名を検出する', () => {
+      const emojiMap = new Map([
+        ['ハート', 'https://example.com/heart.png'],
+      ]);
+      const result = processMessage(':ハート:', emojiMap);
+
+      expect(result.sanitizedText).toBe(':ハート:');
+      expect(result.emojis).toEqual({
+        ハート: 'https://example.com/heart.png',
+      });
+    });
+
+    it('漢字とひらがな混合の絵文字名を検出する', () => {
+      const emojiMap = new Map([
+        ['お疲れさま', 'https://example.com/otsukare.png'],
+      ]);
+      const result = processMessage(':お疲れさま:', emojiMap);
+
+      expect(result.sanitizedText).toBe(':お疲れさま:');
+      expect(result.emojis).toEqual({
+        お疲れさま: 'https://example.com/otsukare.png',
+      });
+    });
+
+    it('ASCIIと日本語混合の絵文字名を検出する', () => {
+      const emojiMap = new Map([
+        ['good_仕事', 'https://example.com/good_shigoto.png'],
+      ]);
+      const result = processMessage(':good_仕事:', emojiMap);
+
+      expect(result.sanitizedText).toBe(':good_仕事:');
+      expect(result.emojis).toEqual({
+        good_仕事: 'https://example.com/good_shigoto.png',
+      });
+    });
+
+    it('日本語絵文字と標準絵文字を同時に処理する', () => {
+      const emojiMap = new Map([
+        ['完了', 'https://example.com/kanryo.png'],
+      ]);
+      const result = processMessage(':完了: Done! :fire:', emojiMap);
+
+      expect(result.sanitizedText).toBe(':完了: Done! :fire:');
+      expect(result.emojis['完了']).toBe('https://example.com/kanryo.png');
+      expect(result.emojis['fire']).toBeDefined(); // 標準絵文字
+    });
+
+    it('存在しない日本語絵文字はURLマップに含めない', () => {
+      const emojiMap = new Map([
+        ['存在する', 'https://example.com/exists.png'],
+      ]);
+      const result = processMessage(':存在する: :存在しない:', emojiMap);
+
+      expect(result.sanitizedText).toBe(':存在する: :存在しない:');
+      expect(result.emojis['存在する']).toBe('https://example.com/exists.png');
+      expect(result.emojis['存在しない']).toBeUndefined();
+    });
+
+    it('全角英数字を含む絵文字名を検出する', () => {
+      const emojiMap = new Map([
+        ['テスト１２３', 'https://example.com/test123.png'],
+      ]);
+      const result = processMessage(':テスト１２３:', emojiMap);
+
+      expect(result.sanitizedText).toBe(':テスト１２３:');
+      expect(result.emojis).toEqual({
+        テスト１２３: 'https://example.com/test123.png',
+      });
+    });
+  });
+
   it('リンク（表示テキストなし）を除去する', () => {
     const emojiMap = new Map<string, string>();
     const result = processMessage('Check <http://example.com>', emojiMap);
