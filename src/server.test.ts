@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { getUserDisplayName, clearUserCache, generateUserColor, type SlackClient } from './server.js';
+import {
+  getUserDisplayName,
+  clearUserCache,
+  generateUserColor,
+  getCommentCount,
+  incrementCommentCount,
+  resetCommentCount,
+  type SlackClient,
+} from './server.js';
 
 // モック用のヘルパー関数
 function createMockClient(): SlackClient & { users: { info: Mock } } {
@@ -117,5 +125,32 @@ describe('generateUserColor', () => {
   it('should handle empty string without error', () => {
     const color = generateUserColor('');
     expect(color).toMatch(/^hsl\(\d{1,3}, 80%, 65%\)$/);
+  });
+});
+
+describe('Comment Counter', () => {
+  beforeEach(() => {
+    resetCommentCount();
+  });
+
+  describe('getCommentCount', () => {
+    it('初期値は0を返す', () => {
+      expect(getCommentCount()).toBe(0);
+    });
+  });
+
+  describe('incrementCommentCount', () => {
+    it('カウントをインクリメントして新しい値を返す', () => {
+      expect(incrementCommentCount()).toBe(1);
+      expect(incrementCommentCount()).toBe(2);
+    });
+  });
+
+  describe('resetCommentCount', () => {
+    it('カウントを0にリセットする', () => {
+      incrementCommentCount();
+      resetCommentCount();
+      expect(getCommentCount()).toBe(0);
+    });
   });
 });

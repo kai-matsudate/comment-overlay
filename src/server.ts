@@ -45,6 +45,33 @@ export interface SlackClient {
 }
 
 // ============================================
+// コメントカウンター
+// ============================================
+let commentCount = 0;
+
+/**
+ * 現在のコメント数を取得
+ */
+export function getCommentCount(): number {
+  return commentCount;
+}
+
+/**
+ * コメント数をインクリメントし、新しい値を返す
+ */
+export function incrementCommentCount(): number {
+  commentCount += 1;
+  return commentCount;
+}
+
+/**
+ * コメント数をリセット（テスト用）
+ */
+export function resetCommentCount(): void {
+  commentCount = 0;
+}
+
+// ============================================
 // ユーザーキャッシュ
 // ============================================
 const userCache = new Map<string, UserCache>();
