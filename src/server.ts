@@ -20,10 +20,18 @@ interface ThreadInfo {
 }
 
 interface CommentMessage {
+  type: 'comment';
   text: string;
   userName: string;
   userColor: string;
 }
+
+interface CounterMessage {
+  type: 'counter';
+  count: number;
+}
+
+type WebSocketMessage = CommentMessage | CounterMessage;
 
 interface UserCache {
   displayName: string;
@@ -207,6 +215,9 @@ async function main(): Promise<void> {
     clients.add(ws);
     console.log(`WebSocket client connected (total: ${clients.size})`);
 
+    // 新規クライアントに現在のカウントを送信
+    ws.send(JSON.stringify({ type: 'counter', count: getCommentCount() }));
+
     ws.on('close', () => {
       clients.delete(ws);
       console.log(`WebSocket client disconnected (total: ${clients.size})`);
@@ -214,7 +225,7 @@ async function main(): Promise<void> {
   });
 
   // 全クライアントにブロードキャスト
-  function broadcast(message: CommentMessage): void {
+  function broadcast(message: WebSocketMessage): void {
     const data = JSON.stringify(message);
     for (const client of clients) {
       if (client.readyState === WebSocket.OPEN) {
@@ -252,7 +263,11 @@ async function main(): Promise<void> {
 
     const userColor = generateUserColor(userId);
     console.log(`New comment from ${userName}: ${text}`);
-    broadcast({ text, userName, userColor });
+
+    // カウンターをインクリメントしてブロードキャスト
+    const newCount = incrementCommentCount();
+    broadcast({ type: 'comment', text, userName, userColor });
+    broadcast({ type: 'counter', count: newCount });
   });
 
   // サーバー起動
