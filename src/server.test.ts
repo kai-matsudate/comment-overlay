@@ -488,7 +488,7 @@ describe('processMessage', () => {
     expect(result.emojis['nonexistent']).toBeUndefined();
   });
 
-  it('メンション・リンクは引き続き除去する', () => {
+  it('メンションは除去し、リンクは[リンク]に変換する', () => {
     const emojiMap = new Map([
       ['thumbsup', 'https://example.com/thumbsup.png'],
     ]);
@@ -497,7 +497,7 @@ describe('processMessage', () => {
       emojiMap
     );
 
-    expect(result.sanitizedText).toBe('Check this link :thumbsup:');
+    expect(result.sanitizedText).toBe('Check this [リンク] :thumbsup:');
     expect(result.emojis).toEqual({
       thumbsup: 'https://example.com/thumbsup.png',
     });
@@ -629,11 +629,11 @@ describe('processMessage', () => {
     });
   });
 
-  it('リンク（表示テキストなし）を除去する', () => {
+  it('リンク（表示テキストなし）を[リンク]に変換する', () => {
     const emojiMap = new Map<string, string>();
     const result = processMessage('Check <http://example.com>', emojiMap);
 
-    expect(result.sanitizedText).toBe('Check');
+    expect(result.sanitizedText).toBe('Check [リンク]');
   });
 
   it('連続空白を1つにまとめる', () => {
@@ -727,5 +727,218 @@ describe('processMessage with standard emojis', () => {
 
     expect(result1.emojis['thumbsup']).toBeDefined();
     expect(result2.emojis['+1']).toBeDefined();
+  });
+});
+
+// ============================================
+// Slack特殊記法処理のテスト
+// ============================================
+describe('Slack special notation processing', () => {
+  // ============================================
+  // リンク処理
+  // ============================================
+  describe('Link processing', () => {
+    it('リンク（テキスト付き）を[リンク]に変換する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage(
+        'Check this <http://example.com|Click here>',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('Check this [リンク]');
+    });
+
+    it('リンク（テキストなし）を[リンク]に変換する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage(
+        'Visit <http://example.com>',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('Visit [リンク]');
+    });
+
+    it('HTTPSリンクも[リンク]に変換する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage(
+        '<https://secure.example.com|Secure>',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('[リンク]');
+    });
+
+    it('複数のリンクを処理する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage(
+        '<http://a.com> and <http://b.com|B>',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('[リンク] and [リンク]');
+    });
+  });
+
+  // ============================================
+  // テキスト装飾記号の除去
+  // ============================================
+  describe('Text decoration removal', () => {
+    it('太字 *text* からマーカーを除去する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('This is *bold* text', emojiMap);
+      expect(result.sanitizedText).toBe('This is bold text');
+    });
+
+    it('イタリック _text_ からマーカーを除去する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('This is _italic_ text', emojiMap);
+      expect(result.sanitizedText).toBe('This is italic text');
+    });
+
+    it('打ち消し線 ~text~ からマーカーを除去する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('This is ~deleted~ text', emojiMap);
+      expect(result.sanitizedText).toBe('This is deleted text');
+    });
+
+    it('インラインコード `code` からマーカーを除去する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('Run `npm install` command', emojiMap);
+      expect(result.sanitizedText).toBe('Run npm install command');
+    });
+
+    it('複数のスタイルを同時に処理する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage(
+        '*bold* and _italic_ and ~strike~ and `code`',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('bold and italic and strike and code');
+    });
+
+    it('ネストした装飾を処理する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('*_bold italic_*', emojiMap);
+      expect(result.sanitizedText).toBe('bold italic');
+    });
+
+    it('空の装飾（例: **）は除去する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('Hello ** World', emojiMap);
+      expect(result.sanitizedText).toBe('Hello World');
+    });
+  });
+
+  // ============================================
+  // コードブロック処理
+  // ============================================
+  describe('Code block processing', () => {
+    it('コードブロックを[コード]に変換する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage(
+        'Here is code:\n```\nconst x = 1;\n```',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('Here is code: [コード]');
+    });
+
+    it('言語指定付きコードブロックを[コード]に変換する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage(
+        '```javascript\nconsole.log("hi");\n```',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('[コード]');
+    });
+
+    it('コードブロック内の装飾記号は変換しない', () => {
+      const emojiMap = new Map<string, string>();
+      // コードブロック全体が[コード]に置換されるので、内部は関係ない
+      const result = processMessage(
+        '```\n*not bold* _not italic_\n```',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('[コード]');
+    });
+
+    it('複数のコードブロックを処理する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage(
+        '```\ncode1\n``` and ```\ncode2\n```',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('[コード] and [コード]');
+    });
+  });
+
+  // ============================================
+  // 引用処理
+  // ============================================
+  describe('Quote processing', () => {
+    it('引用 > text から記号を除去する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('> This is a quote', emojiMap);
+      expect(result.sanitizedText).toBe('This is a quote');
+    });
+
+    it('複数行の引用を処理する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('> line1\n> line2', emojiMap);
+      expect(result.sanitizedText).toBe('line1 line2');
+    });
+
+    it('ブロック引用 >>> を処理する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('>>> This is\na block quote', emojiMap);
+      expect(result.sanitizedText).toBe('This is a block quote');
+    });
+  });
+
+  // ============================================
+  // リスト処理
+  // ============================================
+  describe('List processing', () => {
+    it('順序なしリスト（・）を1行に変換する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('• item1\n• item2\n• item3', emojiMap);
+      expect(result.sanitizedText).toBe('item1・item2・item3');
+    });
+
+    it('順序なしリスト（-）を1行に変換する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('- item1\n- item2', emojiMap);
+      expect(result.sanitizedText).toBe('item1・item2');
+    });
+
+    it('順序付きリストを1行に変換する', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('1. first\n2. second\n3. third', emojiMap);
+      expect(result.sanitizedText).toBe('1.first 2.second 3.third');
+    });
+  });
+
+  // ============================================
+  // エッジケース
+  // ============================================
+  describe('Edge cases', () => {
+    it('複合的なメッセージを正しく処理する', () => {
+      const emojiMap = new Map([
+        ['thumbsup', 'https://example.com/thumbsup.png'],
+      ]);
+      const result = processMessage(
+        '*Important:* Check <https://example.com|this link> :thumbsup:',
+        emojiMap
+      );
+      expect(result.sanitizedText).toBe('Important: Check [リンク] :thumbsup:');
+      expect(result.emojis['thumbsup']).toBeDefined();
+    });
+
+    it('空のメッセージは空のまま返す', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('', emojiMap);
+      expect(result.sanitizedText).toBe('');
+    });
+
+    it('通常テキストはそのまま返す', () => {
+      const emojiMap = new Map<string, string>();
+      const result = processMessage('Hello World!', emojiMap);
+      expect(result.sanitizedText).toBe('Hello World!');
+    });
   });
 });
