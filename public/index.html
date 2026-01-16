@@ -26,7 +26,7 @@
       position: absolute;
       display: flex;
       flex-direction: column;
-      font-size: 32px;
+      /* font-size is set dynamically via JavaScript based on text length */
       font-weight: bold;
       /* color is set dynamically via JavaScript */
       text-shadow:
@@ -95,11 +95,27 @@
       };
     }
 
+    // フォントサイズ決定
+    // | 文字数 | フォントサイズ |
+    // | 1〜10文字 | 40px (大) |
+    // | 11〜30文字 | 32px (中) |
+    // | 31文字以上 | 24px (小) |
+    function getFontSize(text) {
+      const length = text.length;
+      if (length <= 10) return 40;
+      if (length <= 30) return 32;
+      return 24;
+    }
+
     // コメント表示
     function showComment(userName, text, userColor) {
       const comment = document.createElement('div');
       comment.className = 'comment';
       comment.style.color = userColor;
+
+      // フォントサイズを動的に設定
+      const fontSize = getFontSize(text);
+      comment.style.fontSize = `${fontSize}px`;
 
       // コメントテキスト
       const textSpan = document.createElement('span');
