@@ -49,6 +49,13 @@
       margin-top: 0;
     }
 
+    .emoji {
+      height: 1em;
+      width: auto;
+      vertical-align: baseline;
+      margin: 0 0.1em;
+    }
+
     @keyframes flow {
       from {
         transform: translateX(100vw);
@@ -117,7 +124,7 @@
 
         // コメントメッセージの処理（後方互換性維持）
         if (data.text && data.userName) {
-          showComment(data.userName, data.text, data.userColor || '#ffffff');
+          showComment(data.userName, data.text, data.userColor || '#ffffff', data.emojis || {});
         }
       };
 
@@ -150,6 +157,58 @@
       if (length <= 10) return 40;
       if (length <= 30) return 32;
       return 24;
+    }
+
+    // テキスト内の絵文字を画像に置換してDocumentFragmentを返す
+    function renderTextWithEmojis(text, emojis) {
+      const fragment = document.createDocumentFragment();
+
+      // emojisが空または未定義の場合はテキストのみ返す
+      if (!emojis || Object.keys(emojis).length === 0) {
+        fragment.appendChild(document.createTextNode(text));
+        return fragment;
+      }
+
+      // 絵文字パターンでテキストを分割
+      const emojiPattern = /:([a-z0-9_+-]+):/gi;
+      let lastIndex = 0;
+      let match;
+
+      while ((match = emojiPattern.exec(text)) !== null) {
+        // マッチ前のテキストを追加
+        if (match.index > lastIndex) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+        }
+
+        const emojiName = match[1];
+        const emojiUrl = emojis[emojiName];
+
+        if (emojiUrl) {
+          // 絵文字画像を作成
+          const img = document.createElement('img');
+          img.src = emojiUrl;
+          img.alt = ':' + emojiName + ':';
+          img.className = 'emoji';
+          // 読み込みエラー時はテキストにフォールバック
+          img.onerror = function() {
+            const textNode = document.createTextNode(':' + emojiName + ':');
+            this.parentNode.replaceChild(textNode, this);
+          };
+          fragment.appendChild(img);
+        } else {
+          // URLがない場合はテキストのまま
+          fragment.appendChild(document.createTextNode(match[0]));
+        }
+
+        lastIndex = match.index + match[0].length;
+      }
+
+      // 残りのテキストを追加
+      if (lastIndex < text.length) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      }
+
+      return fragment;
     }
 
     // レーンのY座標を計算
@@ -196,7 +255,7 @@
     }
 
     // コメント表示
-    function showComment(userName, text, userColor) {
+    function showComment(userName, text, userColor, emojis) {
       const comment = document.createElement('div');
       comment.className = 'comment';
       comment.style.color = userColor;
@@ -205,10 +264,10 @@
       const fontSize = getFontSize(text);
       comment.style.fontSize = `${fontSize}px`;
 
-      // コメントテキスト
+      // コメントテキスト（絵文字を画像に置換）
       const textSpan = document.createElement('span');
       textSpan.className = 'comment-text';
-      textSpan.textContent = text;
+      textSpan.appendChild(renderTextWithEmojis(text, emojis));
       comment.appendChild(textSpan);
 
       // 投稿者名（右下に控えめに表示）
