@@ -24,6 +24,7 @@ interface CommentMessage {
   text: string;
   userName: string;
   userColor: string;
+  emojis?: Record<string, string>;
 }
 
 interface CounterMessage {
@@ -446,19 +447,23 @@ async function main(): Promise<void> {
     const userId = 'user' in event ? event.user : undefined;
     if (!userId) return;
 
-    // textプロパティを安全に取得
-    const text = sanitizeMessage('text' in event ? event.text : undefined);
-    if (!text) return; // 空メッセージはスキップ
+    // 絵文字リストを取得
+    const emojiMap = await getEmojiList(client as SlackClient);
+
+    // テキストを処理（絵文字URLマップを含む）
+    const rawText = 'text' in event ? event.text : undefined;
+    const { sanitizedText, emojis } = processMessage(rawText, emojiMap);
+    if (!sanitizedText) return; // 空メッセージはスキップ
 
     // ユーザー名を取得
     const userName = await getUserDisplayName(client as SlackClient, userId);
 
     const userColor = generateUserColor(userId);
-    console.log(`New comment from ${userName}: ${text}`);
+    console.log(`New comment from ${userName}: ${sanitizedText}`);
 
     // カウンターをインクリメントしてブロードキャスト
     const newCount = incrementCommentCount();
-    broadcast({ type: 'comment', text, userName, userColor });
+    broadcast({ type: 'comment', text: sanitizedText, userName, userColor, emojis });
     broadcast({ type: 'counter', count: newCount });
   });
 
