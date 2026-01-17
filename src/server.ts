@@ -92,7 +92,7 @@ async function main(): Promise<void> {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https://emoji.slack-edge.com", "https://cdn.jsdelivr.net"],
         connectSrc: ["'self'", "ws://localhost:*", "wss://localhost:*"],
