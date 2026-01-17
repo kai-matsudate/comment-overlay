@@ -14,7 +14,9 @@
     "test:watch": "vitest",
     "electron:build": "tsc -p tsconfig.electron.json && cp electron/package.json dist/electron/",
     "electron": "npm run electron:build && electron dist/electron/main.js",
-    "dev:overlay": "./scripts/dev-overlay.sh"
+    "dev:overlay": "./scripts/dev-overlay.sh",
+    "encrypt-env": "./scripts/encrypt-env.sh",
+    "decrypt-env": "./scripts/decrypt-env.sh"
   },
   "dependencies": {
     "@slack/bolt": "^4.6.0",
