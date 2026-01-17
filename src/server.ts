@@ -172,6 +172,13 @@ async function main(): Promise<void> {
   // サーバー起動
   const PORT = process.env['PORT'] || 8000;
 
+  // HTTPサーバーを先に起動（Electronが即座に接続できる）
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log('Open this URL in OBS Browser Source');
+  });
+
+  // Slack接続は後続処理として実行（時間がかかっても問題ない）
   await slackApp.start();
   console.log('Slack connection established (Socket Mode)');
 
@@ -183,11 +190,6 @@ async function main(): Promise<void> {
   );
   setCommentCount(initialCount);
   console.log(`Initial comment count: ${initialCount}`);
-
-  httpServer.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log('Open this URL in OBS Browser Source');
-  });
 }
 
 // テスト時は main() を実行しない

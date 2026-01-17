@@ -71,7 +71,7 @@
       left: 20px;
       font-size: 24px;
       font-weight: bold;
-      color: #ffffff;
+      color: #4CAF50;
       background: rgba(0, 0, 0, 0.5);
       padding: 8px 16px;
       border-radius: 8px;
@@ -139,11 +139,20 @@
       };
     }
 
+    // カウンター色決定（盛り上がり系カラースキーム）
+    function getCounterColor(count) {
+      if (count >= 100) return '#FFD700'; // Gold - 最高潮
+      if (count >= 50) return '#FF9800';  // Orange - 熱くなってきた
+      if (count >= 25) return '#FFEB3B';  // Yellow - 盛り上がり開始
+      return '#4CAF50';                    // Green - 平穏
+    }
+
     // カウンター更新
     function updateCounter(count) {
       const counter = document.getElementById('comment-counter');
       if (counter) {
         counter.textContent = `💬 ${count}`;
+        counter.style.color = getCounterColor(count);
       }
     }
 
