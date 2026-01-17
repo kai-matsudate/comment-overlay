@@ -191,7 +191,6 @@ async function main(): Promise<void> {
   // HTTPサーバーを先に起動（Electronが即座に接続できる）
   httpServer.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
-    console.log('Open this URL in OBS Browser Source');
   });
 
   // Slack接続は後続処理として実行（時間がかかっても問題ない）
