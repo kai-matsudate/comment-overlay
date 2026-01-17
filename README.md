@@ -94,9 +94,11 @@ npm run encrypt-env
 3. 復号化:
 
 ```bash
-export ENCRYPTION_PASSWORD='your-password'
 npm run decrypt-env
 ```
+
+実行するとパスワードの入力を求められます（入力は画面に表示されません）。
+管理者から共有されたパスワードを入力してください。
 
 ### 7. Slackチャンネルへの招待
 

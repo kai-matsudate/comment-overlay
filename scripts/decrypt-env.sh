@@ -5,9 +5,13 @@ readonly ENV_FILE=".env"
 readonly ENCRYPTED_FILE=".env.encrypted"
 readonly ALGORITHM="aes-256-cbc"
 
+# パスワードを対話的に入力
+echo "パスワードを入力してください（入力は表示されません）:" >&2
+read -s ENCRYPTION_PASSWORD
+echo "" >&2  # 改行
+
 if [ -z "$ENCRYPTION_PASSWORD" ]; then
-  echo "Error: ENCRYPTION_PASSWORD環境変数が設定されていません" >&2
-  echo "使用方法: export ENCRYPTION_PASSWORD='your-password' && npm run decrypt-env" >&2
+  echo "Error: パスワードが入力されませんでした" >&2
   exit 1
 fi
 
@@ -25,5 +29,5 @@ if [ -f "$ENV_FILE" ]; then
   fi
 fi
 
-openssl enc -d -$ALGORITHM -pbkdf2 -in "$ENCRYPTED_FILE" -out "$ENV_FILE" -pass env:ENCRYPTION_PASSWORD
+echo "$ENCRYPTION_PASSWORD" | openssl enc -d -$ALGORITHM -pbkdf2 -in "$ENCRYPTED_FILE" -out "$ENV_FILE" -pass stdin
 echo "✓ Decrypted to $ENV_FILE"
