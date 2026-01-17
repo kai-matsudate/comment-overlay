@@ -53,8 +53,6 @@ npm install
 
 ### 6. 環境変数の設定
 
-#### 個人開発の場合
-
 ```bash
 cp .env.example .env
 ```
@@ -66,20 +64,9 @@ SLACK_BOT_TOKEN=xoxb-xxxx  # 手順4で取得したトークン
 SLACK_APP_TOKEN=xapp-xxxx  # 手順2で取得したトークン
 ```
 
-#### 複数人での開発（トークン共有）
+#### 複数人での利用
 
-トークンを安全に共有するため、暗号化機能を使用できます。
-
-**利用者の場合**:
-
-1. トークン管理者から `.env.encrypted` とパスワードを受け取る
-2. `.env.encrypted` をプロジェクトルートに配置
-3. 復号化:
-
-```bash
-export ENCRYPTION_PASSWORD='共有されたパスワード'
-npm run decrypt-env
-```
+トークンの管理者と利用者間で暗号化した環境変数ファイルを共有してください。
 
 **管理者の場合**:
 
@@ -93,15 +80,23 @@ cp .env.example .env
 2. 暗号化:
 
 ```bash
-export ENCRYPTION_PASSWORD='your-password'
 npm run encrypt-env
 ```
 
-3. `.env.encrypted` とパスワードを安全に共有（オフラインで）
+スクリプトが自動的にパスワードを生成し、画面に表示します。
 
-**注意**:
-- `.env` と `.env.encrypted` はGitにコミットしない
-- パスワードを公開チャンネルやIssueに投稿しない
+3. `.env.encrypted` と表示されたパスワードを安全に共有（オフラインで）
+
+**利用者の場合**:
+
+1. トークン管理者から `.env.encrypted` とパスワードを受け取る
+2. `.env.encrypted` をプロジェクトルートに配置
+3. 復号化:
+
+```bash
+export ENCRYPTION_PASSWORD='your-password'
+npm run decrypt-env
+```
 
 ### 7. Slackチャンネルへの招待
 
