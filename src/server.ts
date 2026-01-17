@@ -2,6 +2,7 @@ import 'dotenv/config';
 import pkg from '@slack/bolt';
 const { App } = pkg;
 import express from 'express';
+import helmet from 'helmet';
 import { createServer } from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
 import path from 'path';
@@ -84,6 +85,21 @@ async function main(): Promise<void> {
 
   // Express + HTTP サーバー
   const expressApp = express();
+
+  // セキュリティ: HTTPセキュリティヘッダーを設定
+  expressApp.use(helmet({
+    // WebSocket接続のためCSPを調整
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https://emoji.slack-edge.com", "https://cdn.jsdelivr.net"],
+        connectSrc: ["'self'", "ws://localhost:*", "wss://localhost:*"],
+      },
+    },
+  }));
+
   expressApp.use(express.static(path.join(__dirname, '../public')));
   const httpServer = createServer(expressApp);
 

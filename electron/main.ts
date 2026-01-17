@@ -1,6 +1,7 @@
 import { app, BrowserWindow, screen } from 'electron'
 
-const OVERLAY_URL = process.env.OVERLAY_URL || 'http://localhost:8000'
+// セキュリティ: 固定URLのみ許可（環境変数経由の外部URL注入を防止）
+const OVERLAY_URL = 'http://localhost:8000'
 
 function createOverlayWindow(): BrowserWindow {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
