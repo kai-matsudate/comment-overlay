@@ -170,7 +170,7 @@ async function main(): Promise<void> {
   });
 
   // サーバー起動
-  const PORT = process.env['PORT'] || 3000;
+  const PORT = process.env['PORT'] || 8000;
 
   await slackApp.start();
   console.log('Slack connection established (Socket Mode)');

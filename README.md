@@ -94,5 +94,5 @@ npm run dev:overlay -- "https://xxx.slack.com/archives/C1234567890/p170520000000
 npm run dev "https://xxx.slack.com/archives/C1234567890/p1705200000000000"
 ```
 
-ブラウザで http://localhost:3000 を開いてコメントの流れを確認できます。
+ブラウザで http://localhost:8000 を開いてコメントの流れを確認できます。
 
