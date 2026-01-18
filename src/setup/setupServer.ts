@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import { ProcessManager } from './services/processManager.js';
 import { createDecryptRouter } from './routes/decryptRoute.js';
 import { createControlRouter } from './routes/controlRoute.js';
@@ -13,12 +14,30 @@ import { createStatusRouter, createStatusMessage } from './routes/statusRoute.js
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * フロントエンドバンドルの存在を確認する
+ * ビルドされていない場合はエラーメッセージを表示して終了
+ */
+export function checkFrontendBuild(): void {
+  const frontendBundle = path.join(__dirname, '../../public/setup/js/app.js');
+  if (!existsSync(frontendBundle)) {
+    console.error('');
+    console.error('Error: フロントエンドがビルドされていません');
+    console.error('先に npm run build を実行してください');
+    console.error('');
+    process.exit(1);
+  }
+}
+
 const SETUP_PORT = 8001;
 
 /**
  * Setup Serverのメイン処理
  */
 async function main(): Promise<void> {
+  // フロントエンドビルドの存在確認
+  checkFrontendBuild();
+
   console.log('Starting Setup Server...');
 
   // 状態管理
