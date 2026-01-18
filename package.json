@@ -6,7 +6,6 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
@@ -16,12 +15,10 @@
     "electron": "npm run electron:build && electron dist/electron/main.js",
     "dev:overlay": "./scripts/dev-overlay.sh",
     "setup": "tsx src/setup/setupServer.ts",
-    "encrypt-env": "./scripts/encrypt-env.sh",
-    "decrypt-env": "./scripts/decrypt-env.sh"
+    "encrypt-env": "./scripts/encrypt-env.sh"
   },
   "dependencies": {
     "@slack/bolt": "^4.6.0",
-    "dotenv": "^16.3.0",
     "emoji-datasource": "^16.0.0",
     "express": "^4.18.0",
     "helmet": "^8.1.0",

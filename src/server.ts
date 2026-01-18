@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import pkg from '@slack/bolt';
 const { App } = pkg;
 import express from 'express';
@@ -75,7 +74,7 @@ async function main(): Promise<void> {
   const slackBotToken = process.env['SLACK_BOT_TOKEN'];
   const slackAppToken = process.env['SLACK_APP_TOKEN'];
   if (!slackBotToken || !slackAppToken) {
-    console.error('Error: SLACK_BOT_TOKEN and SLACK_APP_TOKEN must be set in .env');
+    console.error('Error: SLACK_BOT_TOKEN and SLACK_APP_TOKEN must be set');
     process.exit(1);
   }
 
