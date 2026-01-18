@@ -6,9 +6,13 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "./scripts/build-frontend.sh",
+    "build:backend": "tsc",
+    "build:all": "npm run build:backend && npm run build",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
+    "typecheck:frontend": "tsc -p tsconfig.frontend.json --noEmit",
+    "typecheck:all": "npm run typecheck && npm run typecheck:frontend",
     "test": "vitest run",
     "test:watch": "vitest",
     "electron:build": "tsc -p tsconfig.electron.json && cp electron/package.json dist/electron/",
@@ -30,6 +34,7 @@
     "@types/ws": "^8.18.1",
     "concurrently": "^9.2.1",
     "electron": "^35.7.5",
+    "esbuild": "^0.24.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
