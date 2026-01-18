@@ -20,7 +20,8 @@
     try {
       const version = await window.electronAPI.getAppVersion()
       versionEl.textContent = 'v' + version
-    } catch {
+    } catch (err) {
+      console.warn('Failed to get app version:', err)
       versionEl.textContent = ''
     }
 
@@ -30,8 +31,8 @@
     // Check for updates
     try {
       await window.electronAPI.checkForUpdates()
-    } catch {
-      // Ignore update check errors
+    } catch (err) {
+      console.warn('Failed to check for updates:', err)
     }
 
     // Listen for status changes
