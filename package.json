@@ -42,7 +42,7 @@
     "vitest": "^4.0.17"
   },
   "build": {
-    "appId": "com.example.comment-overlay",
+    "appId": "com.github.kai-matsudate.comment-overlay",
     "productName": "Comment Overlay",
     "directories": {
       "output": "release",
