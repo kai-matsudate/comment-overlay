@@ -2,7 +2,6 @@ import { app, BrowserWindow, screen, ipcMain, dialog } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import * as path from 'path'
 import { spawn, ChildProcess } from 'child_process'
-import { createDecipheriv, pbkdf2Sync } from 'crypto'
 import {
   getSlackTokens,
   setSlackTokens,
@@ -10,6 +9,7 @@ import {
   getRecentThreads,
   addRecentThread,
 } from './store'
+import { decryptEnvContent } from './decrypt'
 
 // Window references
 let controlWindow: BrowserWindow | null = null
@@ -218,59 +218,6 @@ function stopServer(): void {
   if (overlayWindow) {
     overlayWindow.close()
     overlayWindow = null
-  }
-}
-
-// Decrypt .env.encrypted content
-function decryptEnvContent(
-  encryptedBase64: string,
-  password: string
-): { success: boolean; botToken?: string; appToken?: string; error?: string } {
-  try {
-    const encrypted = Buffer.from(encryptedBase64, 'base64')
-
-    // OpenSSL format: "Salted__" + 8 bytes salt + encrypted data
-    const salted = encrypted.subarray(0, 8).toString()
-    if (salted !== 'Salted__') {
-      return { success: false, error: 'Invalid encrypted file format' }
-    }
-
-    const salt = encrypted.subarray(8, 16)
-    const ciphertext = encrypted.subarray(16)
-
-    // Derive key and IV using PBKDF2 (matching OpenSSL's -pbkdf2 option)
-    const keyIv = pbkdf2Sync(password, salt, 10000, 48, 'sha256')
-    const key = keyIv.subarray(0, 32)
-    const iv = keyIv.subarray(32, 48)
-
-    const decipher = createDecipheriv('aes-256-cbc', key, iv)
-    let decrypted = decipher.update(ciphertext)
-    decrypted = Buffer.concat([decrypted, decipher.final()])
-
-    const content = decrypted.toString('utf-8')
-
-    // Parse .env content
-    const lines = content.split('\n')
-    let botToken = ''
-    let appToken = ''
-
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('SLACK_BOT_TOKEN=')) {
-        botToken = trimmed.substring('SLACK_BOT_TOKEN='.length).trim()
-      } else if (trimmed.startsWith('SLACK_APP_TOKEN=')) {
-        appToken = trimmed.substring('SLACK_APP_TOKEN='.length).trim()
-      }
-    }
-
-    if (!botToken || !appToken) {
-      return { success: false, error: 'Tokens not found in decrypted content' }
-    }
-
-    return { success: true, botToken, appToken }
-  } catch (err) {
-    console.error('Decryption error:', err)
-    return { success: false, error: 'Decryption failed. Check your password.' }
   }
 }
 
