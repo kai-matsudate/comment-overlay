@@ -1,0 +1,10 @@
+# Build Resources
+
+Place the following icon files here for app distribution:
+- icon.icns (macOS)
+- icon.ico (Windows)
+- icon.png (512x512, used as source)
+
+You can generate these from a PNG using tools like:
+- https://cloudconvert.com/
+- electron-icon-builder

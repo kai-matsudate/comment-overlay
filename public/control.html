@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <title>Comment Overlay</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .version {
+      font-size: 12px;
+      color: #8892b0;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #ccd6f6;
+    }
+
+    input[type="text"],
+    input[type="url"] {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    input:focus {
+      border-color: #64ffda;
+    }
+
+    input::placeholder {
+      color: #5a6a8a;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #64ffda;
+      color: #0a192f;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #4cd9b4;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-danger {
+      background: #ff6b6b;
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      background: #ee5a5a;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #8892b0;
+    }
+
+    .status-indicator.waiting {
+      background: #8892b0;
+    }
+
+    .status-indicator.connecting {
+      background: #ffc107;
+      animation: pulse 1s infinite;
+    }
+
+    .status-indicator.connected {
+      background: #64ffda;
+    }
+
+    .status-indicator.error {
+      background: #ff6b6b;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-text {
+      font-size: 14px;
+      color: #ccd6f6;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8892b0;
+      margin-bottom: 12px;
+    }
+
+    .recent-list {
+      list-style: none;
+    }
+
+    .recent-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .recent-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .recent-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .recent-item-name {
+      font-size: 14px;
+      color: #ccd6f6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recent-item-date {
+      font-size: 12px;
+      color: #8892b0;
+      margin-top: 2px;
+    }
+
+    .recent-item-arrow {
+      color: #64ffda;
+      font-size: 18px;
+      margin-left: 12px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: #8892b0;
+      font-size: 14px;
+    }
+
+    .update-banner {
+      display: none;
+      padding: 12px 16px;
+      background: rgba(100, 255, 218, 0.1);
+      border: 1px solid rgba(100, 255, 218, 0.3);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+
+    .update-banner.show {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .update-text {
+      font-size: 14px;
+      color: #64ffda;
+    }
+
+    .feedback {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .feedback.error {
+      display: block;
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Comment Overlay</h1>
+    <span id="version" class="version"></span>
+  </div>
+
+  <div id="updateBanner" class="update-banner">
+    <span class="update-text">新しいバージョンが利用可能です</span>
+    <span>→</span>
+  </div>
+
+  <div class="card">
+    <div class="form-group">
+      <label for="threadUrl">スレッドURL</label>
+      <input type="url" id="threadUrl" placeholder="https://xxx.slack.com/archives/CHANNEL/pTIMESTAMP">
+    </div>
+
+    <button id="startBtn" class="btn btn-primary">オーバーレイ開始</button>
+    <button id="stopBtn" class="btn btn-danger" style="display: none;">オーバーレイ停止</button>
+
+    <div id="feedback" class="feedback"></div>
+
+    <div class="status-bar">
+      <div id="statusIndicator" class="status-indicator waiting"></div>
+      <span id="statusText" class="status-text">待機中</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">最近使用したスレッド</div>
+    <ul id="recentList" class="recent-list">
+      <li class="empty-state">履歴はありません</li>
+    </ul>
+  </div>
+
+  <script src="js/control.js"></script>
+</body>
+</html>

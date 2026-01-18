@@ -4,3 +4,7 @@ node_modules/
 .DS_Store
 .claude/work-logs/
 dist/
+release/
+*.dmg
+*.exe
+*.blockmap

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <title>Comment Overlay - Setup</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 480px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #8892b0;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .drop-zone {
+      border: 2px dashed rgba(100, 255, 218, 0.3);
+      border-radius: 8px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 20px;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: #64ffda;
+      background: rgba(100, 255, 218, 0.05);
+    }
+
+    .drop-zone.has-file {
+      border-color: #64ffda;
+      background: rgba(100, 255, 218, 0.1);
+    }
+
+    .drop-zone-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .drop-zone-text {
+      font-size: 14px;
+      color: #8892b0;
+    }
+
+    .drop-zone-filename {
+      font-size: 14px;
+      color: #64ffda;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #ccd6f6;
+    }
+
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    input:focus {
+      border-color: #64ffda;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #64ffda;
+      color: #0a192f;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #4cd9b4;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #64ffda;
+      border: 1px solid #64ffda;
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(100, 255, 218, 0.1);
+    }
+
+    .feedback {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .feedback.error {
+      display: block;
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      color: #ff6b6b;
+    }
+
+    .feedback.success {
+      display: block;
+      background: rgba(100, 255, 218, 0.1);
+      border: 1px solid rgba(100, 255, 218, 0.3);
+      color: #64ffda;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 24px 0;
+      color: #8892b0;
+      font-size: 12px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .divider span {
+      padding: 0 16px;
+    }
+
+    .manual-setup {
+      display: none;
+    }
+
+    .manual-setup.show {
+      display: block;
+    }
+
+    .toggle-manual {
+      background: none;
+      border: none;
+      color: #64ffda;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 8px 0;
+      text-decoration: underline;
+    }
+
+    .toggle-manual:hover {
+      color: #4cd9b4;
+    }
+
+    .hidden-input {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Comment Overlay</h1>
+    <p class="subtitle">Slackスレッドをニコニコ風にオーバーレイ表示</p>
+
+    <div class="card">
+      <div id="dropZone" class="drop-zone">
+        <div class="drop-zone-icon">📁</div>
+        <div class="drop-zone-text">.env.encrypted をここにドロップ</div>
+        <div id="fileName" class="drop-zone-filename"></div>
+      </div>
+      <input type="file" id="fileInput" class="hidden-input" accept=".encrypted">
+
+      <div class="form-group">
+        <label for="password">パスワード</label>
+        <input type="password" id="password" placeholder="復号化パスワードを入力">
+      </div>
+
+      <button id="setupBtn" class="btn btn-primary" disabled>セットアップ完了</button>
+
+      <div id="feedback" class="feedback"></div>
+
+      <div class="divider"><span>または</span></div>
+
+      <button class="toggle-manual" onclick="toggleManualSetup()">トークンを直接入力</button>
+
+      <div id="manualSetup" class="manual-setup">
+        <div class="form-group">
+          <label for="botToken">Bot Token (xoxb-...)</label>
+          <input type="text" id="botToken" placeholder="xoxb-your-token-here">
+        </div>
+        <div class="form-group">
+          <label for="appToken">App Token (xapp-...)</label>
+          <input type="text" id="appToken" placeholder="xapp-your-token-here">
+        </div>
+        <button id="manualSetupBtn" class="btn btn-secondary">トークンを保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/setup.js"></script>
+</body>
+</html>
