@@ -14,6 +14,10 @@
 
   let isRunning = false
 
+  // Event listener unsubscribe functions for cleanup
+  let unsubscribeStatus = null
+  let unsubscribeUpdate = null
+
   // Initialize
   async function init() {
     // Get app version
@@ -35,13 +39,17 @@
       console.warn('Failed to check for updates:', err)
     }
 
+    // Clean up existing listeners before registering new ones
+    if (unsubscribeStatus) unsubscribeStatus()
+    if (unsubscribeUpdate) unsubscribeUpdate()
+
     // Listen for status changes
-    window.electronAPI.onStatusChange((status) => {
+    unsubscribeStatus = window.electronAPI.onStatusChange((status) => {
       updateStatus(status)
     })
 
     // Listen for update availability
-    window.electronAPI.onUpdateAvailable(() => {
+    unsubscribeUpdate = window.electronAPI.onUpdateAvailable(() => {
       updateBanner.classList.add('show')
     })
   }
@@ -189,6 +197,12 @@
   // Update banner click
   updateBanner.addEventListener('click', () => {
     window.electronAPI.checkForUpdates()
+  })
+
+  // Cleanup listeners on page unload to prevent memory leaks
+  window.addEventListener('beforeunload', () => {
+    if (unsubscribeStatus) unsubscribeStatus()
+    if (unsubscribeUpdate) unsubscribeUpdate()
   })
 
   // Initialize on load
