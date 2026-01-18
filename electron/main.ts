@@ -18,6 +18,9 @@ let serverProcess: ChildProcess | null = null
 
 // Constants
 const OVERLAY_URL = 'http://localhost:8000'
+const SERVER_PORT = 8000
+const SERVER_STARTUP_TIMEOUT_MS = 30000
+const SERVER_READY_FALLBACK_MS = 3000
 const isDev = !app.isPackaged
 
 // Get the base path for resources
@@ -138,7 +141,7 @@ function startServer(threadUrl: string): Promise<void> {
       ...process.env,
       SLACK_BOT_TOKEN: tokens.botToken,
       SLACK_APP_TOKEN: tokens.appToken,
-      PORT: '8000',
+      PORT: String(SERVER_PORT),
     }
 
     // Determine server entry point
@@ -174,7 +177,7 @@ function startServer(threadUrl: string): Promise<void> {
       if (!resolved) {
         reject(new Error('Server startup timeout'))
       }
-    }, 30000)
+    }, SERVER_STARTUP_TIMEOUT_MS)
 
     serverProcess.stdout?.on('data', (data: Buffer) => {
       const output = data.toString()
@@ -207,12 +210,12 @@ function startServer(threadUrl: string): Promise<void> {
       }
     })
 
-    // Fallback: if server doesn't emit ready message, assume started after 3s
+    // Fallback: if server doesn't emit ready message, assume started after fallback delay
     setTimeout(() => {
       if (serverProcess) {
         markStarted()
       }
-    }, 3000)
+    }, SERVER_READY_FALLBACK_MS)
   })
 }
 
