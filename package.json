@@ -9,7 +9,8 @@
     "build": "./scripts/build-frontend.sh",
     "build:backend": "tsc",
     "build:all": "npm run build:backend && npm run build",
-    "start": "node dist/server.js",
+    "start": "tsx src/setup/setupServer.ts",
+    "start:server": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "typecheck:frontend": "tsc -p tsconfig.frontend.json --noEmit",
     "typecheck:all": "npm run typecheck && npm run typecheck:frontend",
@@ -18,8 +19,7 @@
     "electron:build": "tsc -p tsconfig.electron.json && cp electron/package.json dist/electron/",
     "electron": "npm run electron:build && electron dist/electron/main.js",
     "dev:overlay": "./scripts/dev-overlay.sh",
-    "setup": "tsx src/setup/setupServer.ts",
-    "encrypt-env": "./scripts/encrypt-env.sh"
+    "encrypt-credentials": "./scripts/encrypt-credentials.sh"
   },
   "dependencies": {
     "@slack/bolt": "^4.6.0",
