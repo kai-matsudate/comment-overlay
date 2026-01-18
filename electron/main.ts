@@ -160,9 +160,18 @@ function startServer(threadUrl: string): Promise<void> {
       })
     }
 
-    let started = false
+    // Single state management to prevent race conditions
+    let resolved = false
+
+    const markStarted = () => {
+      if (resolved) return
+      resolved = true
+      clearTimeout(timeout)
+      resolve()
+    }
+
     const timeout = setTimeout(() => {
-      if (!started) {
+      if (!resolved) {
         reject(new Error('Server startup timeout'))
       }
     }, 30000)
@@ -173,9 +182,7 @@ function startServer(threadUrl: string): Promise<void> {
 
       // Check for server ready message
       if (output.includes('Server running') || output.includes('listening')) {
-        started = true
-        clearTimeout(timeout)
-        resolve()
+        markStarted()
       }
     })
 
@@ -184,8 +191,11 @@ function startServer(threadUrl: string): Promise<void> {
     })
 
     serverProcess.on('error', (err) => {
-      clearTimeout(timeout)
-      reject(err)
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        reject(err)
+      }
     })
 
     serverProcess.on('exit', (code) => {
@@ -197,12 +207,10 @@ function startServer(threadUrl: string): Promise<void> {
       }
     })
 
-    // Give the server a moment to start
+    // Fallback: if server doesn't emit ready message, assume started after 3s
     setTimeout(() => {
-      if (!started && serverProcess) {
-        started = true
-        clearTimeout(timeout)
-        resolve()
+      if (serverProcess) {
+        markStarted()
       }
     }, 3000)
   })
