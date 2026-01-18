@@ -49,6 +49,7 @@ Slackスレッドのコメントをニコニコ動画風にデスクトップ上
 git clone git@github.com:kai-matsudate/comment-overlay.git
 cd comment-overlay
 npm install
+npm run build
 ```
 
 ### 6. 環境変数の設定

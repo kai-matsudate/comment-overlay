@@ -4,3 +4,9 @@ node_modules/
 .DS_Store
 .claude/work-logs/
 dist/
+
+# Frontend build outputs (generated from TypeScript sources)
+public/js/app.js
+public/js/app.js.map
+public/setup/js/app.js
+public/setup/js/app.js.map
