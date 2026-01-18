@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-readonly ENCRYPTED_FILE=".env.encrypted"
+readonly ENCRYPTED_FILE="credentials.encrypted"
 readonly ALGORITHM="aes-256-cbc"
 
 echo "========================================"
-echo "  環境変数の暗号化"
+echo "  認証情報の暗号化"
 echo "========================================"
 echo ""
 
