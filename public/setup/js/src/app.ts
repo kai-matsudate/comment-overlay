@@ -318,11 +318,12 @@ async function decrypt(): Promise<void> {
       showStep(2);
     } else {
       showStep(1);
-      showError(elements.errorMessage, result.error ?? '復号化に失敗しました');
+      const errorMsg = result.error ?? '復号化に失敗しました';
+      showError(elements.errorMessage, `${errorMsg}。パスワードを確認してください。`);
     }
   } catch {
     showStep(1);
-    showError(elements.errorMessage, 'ネットワークエラーが発生しました');
+    showError(elements.errorMessage, 'ネットワークエラーが発生しました。接続を確認して再試行してください。');
   }
 }
 
@@ -347,12 +348,13 @@ async function start(): Promise<void> {
 
     if (!result.success) {
       showStep(2);
-      showError(elements.step2Error, result.error ?? '起動に失敗しました');
+      const errorMsg = result.error ?? '起動に失敗しました';
+      showError(elements.step2Error, `${errorMsg}。URLを確認して再試行してください。`);
     }
     // 成功時はWebSocketで状態更新を受け取る
   } catch {
     showStep(2);
-    showError(elements.step2Error, 'ネットワークエラーが発生しました');
+    showError(elements.step2Error, 'ネットワークエラーが発生しました。接続を確認して再試行してください。');
   }
 }
 
