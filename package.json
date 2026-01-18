@@ -24,9 +24,11 @@
     "emoji-datasource": "^16.0.0",
     "express": "^4.18.0",
     "helmet": "^8.1.0",
+    "multer": "^2.0.2",
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "@types/multer": "^2.0.0",
     "@types/ws": "^8.18.1",
     "concurrently": "^9.2.1",
     "electron": "^35.7.5",
