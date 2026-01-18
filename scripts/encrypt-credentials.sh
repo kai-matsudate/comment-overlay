@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-readonly ENCRYPTED_FILE=".credentials.encrypted"
+readonly ENCRYPTED_FILE="credentials.encrypted"
 readonly ALGORITHM="aes-256-cbc"
 
 echo "========================================"

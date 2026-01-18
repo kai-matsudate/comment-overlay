@@ -62,16 +62,16 @@ npm run build
 npm run encrypt-credentials
 # → SLACK_BOT_TOKEN を入力してください: (入力は表示されません)
 # → SLACK_APP_TOKEN を入力してください: (入力は表示されません)
-# → ✓ Encrypted to .credentials.encrypted
+# → ✓ Encrypted to credentials.encrypted
 # → パスワード: xxxxxx
 ```
 
-生成された `.credentials.encrypted` とパスワードを利用者に共有してください。
+生成された `credentials.encrypted` とパスワードを利用者に共有してください。
 
 #### 利用者の場合
 
-1. トークン管理者から `.credentials.encrypted` とパスワードを受け取る
-2. `.credentials.encrypted` をプロジェクトルートに配置
+1. トークン管理者から `credentials.encrypted` とパスワードを受け取る
+2. `credentials.encrypted` をプロジェクトルートに配置
 3. 「使い方」の手順に進む（WebGUIで復号化を行います）
 
 ### 7. Slackチャンネルへの招待
@@ -94,7 +94,7 @@ npm start
 
 ブラウザで http://localhost:8001 が自動的に開き、3ステップのセットアップウィザードが表示されます。
 
-1. **Step 1: 認証情報の復号化**（`.credentials.encrypted`がある場合のみ）
+1. **Step 1: 認証情報の復号化**（`credentials.encrypted`がある場合のみ）
    - 管理者から共有されたパスワードを入力
    - 「復号化」ボタンをクリック
 
