@@ -1,5 +1,14 @@
 import { app, BrowserWindow, screen } from 'electron'
 
+// シグナルハンドリング: グレースフルシャットダウン
+const gracefulShutdown = () => {
+  console.log('Received shutdown signal, closing...')
+  app.quit()
+}
+
+process.on('SIGTERM', gracefulShutdown)
+process.on('SIGINT', gracefulShutdown)
+
 // セキュリティ: 固定URLのみ許可（環境変数経由の外部URL注入を防止）
 const OVERLAY_URL = 'http://localhost:8000'
 
