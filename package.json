@@ -15,6 +15,7 @@
     "electron:build": "tsc -p tsconfig.electron.json && cp electron/package.json dist/electron/",
     "electron": "npm run electron:build && electron dist/electron/main.js",
     "dev:overlay": "./scripts/dev-overlay.sh",
+    "setup": "tsx src/setup/setupServer.ts",
     "encrypt-env": "./scripts/encrypt-env.sh",
     "decrypt-env": "./scripts/decrypt-env.sh"
   },
