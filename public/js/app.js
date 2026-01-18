@@ -14,7 +14,6 @@ let lanes = new Array(LANE_COUNT).fill(null);
 
 // WebSocket接続
 let ws;
-let reconnectTimer;
 
 // ===========================================
 // WebSocket接続
@@ -25,10 +24,6 @@ function connect() {
 
   ws.onopen = () => {
     console.log('WebSocket connected');
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
   };
 
   ws.onmessage = (event) => {
@@ -47,8 +42,8 @@ function connect() {
   };
 
   ws.onclose = () => {
-    console.log('WebSocket disconnected, reconnecting in 3s...');
-    reconnectTimer = setTimeout(connect, 3000);
+    console.log('WebSocket disconnected');
+    resetCounter();
   };
 
   ws.onerror = (err) => {
@@ -74,6 +69,15 @@ function updateCounter(count) {
   if (counter) {
     counter.textContent = `💬 ${count}`;
     counter.style.color = getCounterColor(count);
+  }
+}
+
+// カウンターをリセット（接続切断時）
+function resetCounter() {
+  const counter = document.getElementById('comment-counter');
+  if (counter) {
+    counter.textContent = '💬 0';
+    counter.style.color = getCounterColor(0);
   }
 }
 
