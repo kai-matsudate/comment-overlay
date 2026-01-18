@@ -8,12 +8,14 @@ import {
   clearConfig,
   _setStoreForTesting,
   _resetStoreForTesting,
+  _setSafeStorageForTesting,
+  _resetSafeStorageForTesting,
   StoreInstance,
   DEFAULT_STORE_CONFIG,
 } from './store'
 
 // Create a mock store implementation for testing
-function createMockStore(): StoreInstance {
+function createMockStore(): StoreInstance & { _data: Record<string, unknown> } {
   let data: Record<string, unknown> = { ...DEFAULT_STORE_CONFIG.defaults }
 
   return {
@@ -29,15 +31,43 @@ function createMockStore(): StoreInstance {
     clear() {
       data = { ...DEFAULT_STORE_CONFIG.defaults }
     },
+    get _data() {
+      return data
+    },
+  }
+}
+
+// Create a mock safeStorage implementation
+function createMockSafeStorage(available: boolean = true) {
+  const encryptedData = new Map<string, string>()
+
+  return {
+    isEncryptionAvailable: () => available,
+    encryptString: (plainText: string): Buffer => {
+      // Simple mock: prefix with 'encrypted:' and convert to buffer
+      const encrypted = `encrypted:${plainText}`
+      encryptedData.set(encrypted, plainText)
+      return Buffer.from(encrypted)
+    },
+    decryptString: (encrypted: Buffer): string => {
+      const encryptedStr = encrypted.toString()
+      if (!encryptedStr.startsWith('encrypted:')) {
+        throw new Error('Invalid encrypted data')
+      }
+      return encryptedStr.substring('encrypted:'.length)
+    },
   }
 }
 
 describe('store', () => {
   beforeEach(() => {
-    // Reset any existing store
+    // Reset any existing store and safeStorage
     _resetStoreForTesting()
+    _resetSafeStorageForTesting()
     // Inject mock store for testing
     _setStoreForTesting(createMockStore())
+    // Default to safeStorage available
+    _setSafeStorageForTesting(createMockSafeStorage(true))
   })
 
   describe('getSlackTokens', () => {
@@ -71,6 +101,32 @@ describe('store', () => {
       setSlackTokens('xoxb-token', 'xapp-token')
 
       expect(isSetupComplete()).toBe(true)
+    })
+
+    it('should use safeStorage when available', () => {
+      const mockStore = createMockStore()
+      _setStoreForTesting(mockStore)
+      _setSafeStorageForTesting(createMockSafeStorage(true))
+
+      setSlackTokens('xoxb-test', 'xapp-test')
+
+      // Tokens should be encrypted (base64 of 'encrypted:...')
+      const storedBot = mockStore._data['slackBotToken'] as string
+      expect(storedBot).not.toBe('xoxb-test')
+      expect(mockStore._data['usesSafeStorage']).toBe(true)
+    })
+
+    it('should fallback to plain storage when safeStorage unavailable', () => {
+      const mockStore = createMockStore()
+      _setStoreForTesting(mockStore)
+      _setSafeStorageForTesting(createMockSafeStorage(false))
+
+      setSlackTokens('xoxb-fallback', 'xapp-fallback')
+
+      // Tokens should be stored directly (not encrypted)
+      expect(mockStore._data['slackBotToken']).toBe('xoxb-fallback')
+      expect(mockStore._data['slackAppToken']).toBe('xapp-fallback')
+      expect(mockStore._data['usesSafeStorage']).toBe(false)
     })
   })
 
@@ -161,6 +217,44 @@ describe('store', () => {
       expect(tokens.appToken).toBe('')
       expect(isSetupComplete()).toBe(false)
       expect(getRecentThreads()).toEqual([])
+    })
+  })
+
+  describe('safeStorage integration', () => {
+    it('should encrypt and decrypt tokens correctly with safeStorage', () => {
+      const mockStore = createMockStore()
+      _setStoreForTesting(mockStore)
+      _setSafeStorageForTesting(createMockSafeStorage(true))
+
+      // Save tokens
+      setSlackTokens('xoxb-secret-bot', 'xapp-secret-app')
+
+      // The stored values should be encrypted (base64)
+      const storedBot = mockStore._data['slackBotToken'] as string
+      const storedApp = mockStore._data['slackAppToken'] as string
+      expect(storedBot).toContain('ZW5jcnlwdGVk') // 'encrypted' in base64
+      expect(storedApp).toContain('ZW5jcnlwdGVk')
+
+      // But getSlackTokens should return decrypted values
+      const tokens = getSlackTokens()
+      expect(tokens.botToken).toBe('xoxb-secret-bot')
+      expect(tokens.appToken).toBe('xapp-secret-app')
+    })
+
+    it('should return empty tokens if decryption fails', () => {
+      const mockStore = createMockStore()
+      _setStoreForTesting(mockStore)
+
+      // Manually set invalid encrypted data
+      mockStore._data['slackBotToken'] = Buffer.from('invalid-data').toString('base64')
+      mockStore._data['slackAppToken'] = Buffer.from('invalid-data').toString('base64')
+      mockStore._data['usesSafeStorage'] = true
+
+      _setSafeStorageForTesting(createMockSafeStorage(true))
+
+      const tokens = getSlackTokens()
+      expect(tokens.botToken).toBe('')
+      expect(tokens.appToken).toBe('')
     })
   })
 })
