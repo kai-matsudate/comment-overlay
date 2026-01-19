@@ -1,0 +1,92 @@
+# electron-builder 設定ファイル
+# ドキュメント: https://www.electron.build/configuration/configuration
+
+appId: com.comment-overlay.app
+productName: Comment Overlay
+
+# Electron エントリーポイント（package.json の main を上書き）
+extends: null
+
+directories:
+  output: release
+  buildResources: build
+
+# パッケージに含めるファイル
+files:
+  - dist/**/*
+  - public/**/*
+  - src/**/*
+  - node_modules/**/*
+  - package.json
+  # 除外パターン
+  - "!node_modules/*/{CHANGELOG.md,README.md,readme.md}"
+  - "!node_modules/**/*.{ts,map,d.ts}"
+  - "!node_modules/**/{test,tests,__tests__}/**"
+  - "!**/.git/**"
+  - "!**/tsconfig*.json"
+  - "!**/*.test.ts"
+  - "!.claude/**"
+
+# ASAR アーカイブ設定
+asar: true
+asarUnpack:
+  # ネイティブモジュールがある場合はここに追加
+  - "**/*.node"
+
+# macOS 設定
+mac:
+  target:
+    - target: dmg
+      arch:
+        - universal
+    - target: zip
+      arch:
+        - universal
+  # icon: build/icon.icns  # カスタムアイコンを使用する場合はコメントを外す
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+# DMG 設定
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# Windows 設定
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # icon: build/icon.ico  # カスタムアイコンを使用する場合はコメントを外す
+
+# NSIS インストーラー設定
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Comment Overlay
+
+# Linux 設定（オプション）
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  # icon: build/icon.png  # カスタムアイコンを使用する場合はコメントを外す
+  category: Utility
+
+# 自動更新は無効（初期リリース）
+publish: null
+
+# ビルド後のフック（オプション）
+afterPack: null
+afterSign: null

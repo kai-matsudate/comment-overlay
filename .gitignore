@@ -4,7 +4,10 @@ credentials.encrypted
 .DS_Store
 .claude/work-logs/
 dist/
-credentials.encrypted
+
+# electron-builder output
+release/
+
 # Frontend build outputs (generated from TypeScript sources)
 public/js/app.js
 public/js/app.js.map
