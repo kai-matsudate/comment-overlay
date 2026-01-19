@@ -2,6 +2,7 @@
   "name": "comment-overlay",
   "version": "1.0.0",
   "description": "Slack thread comments overlay on Desktop",
+  "author": "Comment Overlay Contributors",
   "license": "MIT",
   "type": "module",
   "main": "dist/electron/main.js",
