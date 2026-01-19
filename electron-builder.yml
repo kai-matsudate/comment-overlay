@@ -32,6 +32,11 @@ asar: true
 asarUnpack:
   # ネイティブモジュールがある場合はここに追加
   - "**/*.node"
+  # 子プロセスとして実行するサーバーコードはASAR外に展開
+  - "dist/**/*"
+  - "src/**/*"
+  - "public/**/*"
+  - "node_modules/**/*"
 
 # macOS 設定
 mac:

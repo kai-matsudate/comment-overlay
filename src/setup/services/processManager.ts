@@ -120,9 +120,30 @@ export class ProcessManager {
       };
 
       // サーバープロセスを起動
+      // パッケージ済みアプリの場合はコンパイル済みJSを実行
+      const isPackaged = process.env['PACKAGED_APP'] === '1';
+      const unpackedPath = process.env['PACKAGED_APP_UNPACKED_PATH'];
+
+      let command: string;
+      let args: string[];
+
+      if (isPackaged && unpackedPath) {
+        // パッケージ済みアプリ: node でコンパイル済みJSを実行
+        // asarUnpack で展開されたファイルを使用
+        command = process.execPath;
+        args = [
+          `${unpackedPath}/dist/server.js`,
+          threadUrl,
+        ];
+      } else {
+        // 開発モード: npx tsx でTypeScriptソースを実行
+        command = 'npx';
+        args = ['tsx', 'src/server.ts', threadUrl];
+      }
+
       this.serverProcess = this.options.spawn(
-        'npx',
-        ['tsx', 'src/server.ts', threadUrl],
+        command,
+        args,
         {
           env: processEnv,
           stdio: ['ignore', 'pipe', 'pipe'],

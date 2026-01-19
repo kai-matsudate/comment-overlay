@@ -24,14 +24,46 @@ let overlayPollingInterval: ReturnType<typeof setInterval> | null = null
 
 /**
  * Setup Serverを子プロセスとして起動
+ * - 開発時: npx tsx でTypeScriptソースを実行
+ * - 本番時: node でコンパイル済みJSを実行
  */
 function startSetupServer(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const projectRoot = path.join(__dirname, '..')
+    let command: string
+    let args: string[]
+    let cwd: string
 
-    setupServerProcess = spawn('npx', ['tsx', 'src/setup/setupServer.ts'], {
-      cwd: projectRoot,
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    if (app.isPackaged) {
+      // パッケージ済みアプリ: コンパイル済みJSを node で実行
+      // asarUnpack で展開されたファイルは app.asar.unpacked に配置される
+      // 注意: macOS Hardened Runtime の制限により ELECTRON_RUN_AS_NODE が使えないため、
+      //       システムの node を使用する（Node.js がインストールされている必要あり）
+      const resourcesPath = process.resourcesPath
+      const unpackedPath = path.join(resourcesPath, 'app.asar.unpacked')
+      command = 'node'
+      args = [
+        path.join(unpackedPath, 'dist', 'setup', 'setupServer.js'),
+      ]
+      // asarUnpack で展開されたディレクトリを作業ディレクトリにする
+      cwd = unpackedPath
+    } else {
+      // 開発モード: TypeScriptソースを tsx で実行
+      const projectRoot = path.join(__dirname, '..')
+      command = 'npx'
+      args = ['tsx', 'src/setup/setupServer.ts']
+      cwd = projectRoot
+    }
+
+    setupServerProcess = spawn(command, args, {
+      cwd,
+      env: {
+        ...process.env,
+        // パッケージ済みアプリの場合、子プロセスにも伝達
+        ...(app.isPackaged && {
+          PACKAGED_APP: '1',
+          PACKAGED_APP_UNPACKED_PATH: path.join(process.resourcesPath, 'app.asar.unpacked'),
+        }),
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
 
