@@ -44,7 +44,8 @@ const DEFAULT_START_TIMEOUT = 30000;
 const DEFAULT_STOP_TIMEOUT = 5000;
 
 /**
- * オーバーレイサーバーとElectronアプリのプロセスを管理するクラス
+ * オーバーレイサーバーのプロセスを管理するクラス
+ * 注意: Electronウィンドウの管理はElectron mainプロセス側で行う
  */
 export class ProcessManager {
   private state: ProcessState = 'idle';
@@ -53,7 +54,6 @@ export class ProcessManager {
   private startedAt: number | null = null;
 
   private serverProcess: ChildProcess | null = null;
-  private electronProcess: ChildProcess | null = null;
 
   private callbacks: Set<StatusChangeCallback> = new Set();
   private options: {
@@ -120,9 +120,30 @@ export class ProcessManager {
       };
 
       // サーバープロセスを起動
+      // パッケージ済みアプリの場合はコンパイル済みJSを実行
+      const isPackaged = process.env['PACKAGED_APP'] === '1';
+      const unpackedPath = process.env['PACKAGED_APP_UNPACKED_PATH'];
+
+      let command: string;
+      let args: string[];
+
+      if (isPackaged && unpackedPath) {
+        // パッケージ済みアプリ: node でコンパイル済みJSを実行
+        // asarUnpack で展開されたファイルを使用
+        command = process.execPath;
+        args = [
+          `${unpackedPath}/dist/server.js`,
+          threadUrl,
+        ];
+      } else {
+        // 開発モード: npx tsx でTypeScriptソースを実行
+        command = 'npx';
+        args = ['tsx', 'src/server.ts', threadUrl];
+      }
+
       this.serverProcess = this.options.spawn(
-        'npx',
-        ['tsx', 'src/server.ts', threadUrl],
+        command,
+        args,
         {
           env: processEnv,
           stdio: ['ignore', 'pipe', 'pipe'],
@@ -132,21 +153,12 @@ export class ProcessManager {
       // サーバーが起動完了するまで待機
       await this.waitForServerReady();
 
-      // Electronプロセスを起動
-      this.electronProcess = this.options.spawn(
-        'npm',
-        ['run', 'electron'],
-        {
-          env: processEnv,
-          stdio: ['ignore', 'pipe', 'pipe'],
-        }
-      );
-
       // プロセス終了イベントのリスナーを設定
       this.setupProcessListeners();
 
       this.startedAt = Date.now();
       this.setState('running');
+      // 注意: Overlay Windowの作成はElectron mainプロセス側でポーリングにより自動検知される
 
       return this.sessionId;
     } catch (error) {
@@ -166,19 +178,13 @@ export class ProcessManager {
 
     this.setState('stopping');
 
-    // プロセスを終了
-    const stopPromises: Promise<void>[] = [];
-
-    if (this.electronProcess && !this.electronProcess.killed) {
-      stopPromises.push(this.killProcess(this.electronProcess));
-    }
-
+    // サーバープロセスを終了
     if (this.serverProcess && !this.serverProcess.killed) {
-      stopPromises.push(this.killProcess(this.serverProcess));
+      await this.killProcess(this.serverProcess);
     }
 
-    await Promise.all(stopPromises);
     await this.cleanup();
+    // 注意: Overlay Windowの終了はElectron mainプロセス側でサーバー停止を検知して行う
   }
 
   /**
@@ -216,7 +222,7 @@ export class ProcessManager {
   }
 
   /**
-   * プロセス終了イベントのリスナーを設定
+   * サーバープロセス終了イベントのリスナーを設定
    */
   private setupProcessListeners(): void {
     const handleExit = () => {
@@ -227,7 +233,6 @@ export class ProcessManager {
     };
 
     this.serverProcess?.on('exit', handleExit);
-    this.electronProcess?.on('exit', handleExit);
   }
 
   /**
@@ -261,7 +266,6 @@ export class ProcessManager {
    */
   private async cleanup(): Promise<void> {
     this.serverProcess = null;
-    this.electronProcess = null;
     this.threadUrl = null;
     this.sessionId = null;
     this.startedAt = null;

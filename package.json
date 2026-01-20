@@ -1,10 +1,11 @@
 {
-  "name": "comment-preview",
+  "name": "comment-overlay",
   "version": "1.0.0",
   "description": "Slack thread comments overlay on Desktop",
+  "author": "Comment Overlay Contributors",
   "license": "MIT",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "dist/electron/main.js",
   "scripts": {
     "build": "./scripts/build-frontend.sh",
     "build:backend": "tsc",
@@ -19,7 +20,12 @@
     "electron:build": "tsc -p tsconfig.electron.json && cp electron/package.json dist/electron/",
     "electron": "npm run electron:build && electron dist/electron/main.js",
     "dev:overlay": "./scripts/dev-overlay.sh",
-    "encrypt-credentials": "./scripts/encrypt-credentials.sh"
+    "encrypt-credentials": "./scripts/encrypt-credentials.sh",
+    "pack": "npm run build:all && npm run electron:build && electron-builder --dir",
+    "dist:mac": "npm run build:all && npm run electron:build && electron-builder --mac",
+    "dist:win": "npm run build:all && npm run electron:build && electron-builder --win",
+    "dist:linux": "npm run build:all && npm run electron:build && electron-builder --linux",
+    "dist:all": "npm run build:all && npm run electron:build && electron-builder --mac --win --linux"
   },
   "dependencies": {
     "@slack/bolt": "^4.6.0",
@@ -34,6 +40,7 @@
     "@types/ws": "^8.18.1",
     "concurrently": "^9.2.1",
     "electron": "^35.7.5",
+    "electron-builder": "^26.4.0",
     "esbuild": "^0.24.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

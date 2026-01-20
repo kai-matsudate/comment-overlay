@@ -38,19 +38,15 @@ function createMockProcess(): MockChildProcess {
 describe('ProcessManager', () => {
   let manager: ProcessManager;
   let mockServerProcess: MockChildProcess;
-  let mockElectronProcess: MockChildProcess;
   let mockSpawn: SpawnFn;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockServerProcess = createMockProcess();
-    mockElectronProcess = createMockProcess();
 
-    // spawnの呼び出し順に応じてモックを返す
-    let callCount = 0;
+    // spawnはサーバープロセスのみを返す（Electronは管理しない）
     mockSpawn = vi.fn().mockImplementation(() => {
-      callCount++;
-      return callCount === 1 ? mockServerProcess : mockElectronProcess;
+      return mockServerProcess;
     });
 
     manager = new ProcessManager({
@@ -65,7 +61,6 @@ describe('ProcessManager', () => {
     if (manager.getStatus().state !== 'idle') {
       // プロセス終了をシミュレート
       mockServerProcess.emit('exit', 0, null);
-      mockElectronProcess.emit('exit', 0, null);
       await manager.stop().catch(() => {});
     }
   });
@@ -80,7 +75,7 @@ describe('ProcessManager', () => {
   });
 
   describe('start', () => {
-    it('サーバーとElectronを起動する', async () => {
+    it('オーバーレイサーバーを起動する', async () => {
       const threadUrl = 'https://example.slack.com/archives/C123/p456';
       const env = new Map([
         ['SLACK_BOT_TOKEN', 'xoxb-test'],
@@ -99,7 +94,8 @@ describe('ProcessManager', () => {
 
       expect(sessionId).toBeDefined();
       expect(typeof sessionId).toBe('string');
-      expect(mockSpawn).toHaveBeenCalledTimes(2);
+      // サーバープロセスのみ起動（Electronはmainプロセス側で管理）
+      expect(mockSpawn).toHaveBeenCalledTimes(1);
     });
 
     it('起動後の状態はrunningになる', async () => {
@@ -155,7 +151,7 @@ describe('ProcessManager', () => {
   });
 
   describe('stop', () => {
-    it('実行中のプロセスを停止する', async () => {
+    it('実行中のサーバープロセスを停止する', async () => {
       const threadUrl = 'https://example.slack.com/archives/C123/p456';
       const env = new Map([['SLACK_BOT_TOKEN', 'xoxb-test']]);
 
@@ -174,13 +170,11 @@ describe('ProcessManager', () => {
       // プロセス終了をシミュレート
       setTimeout(() => {
         mockServerProcess.emit('exit', 0, null);
-        mockElectronProcess.emit('exit', 0, null);
       }, 10);
 
       await stopPromise;
 
       expect(mockServerProcess.kill).toHaveBeenCalled();
-      expect(mockElectronProcess.kill).toHaveBeenCalled();
     });
 
     it('停止後の状態はidleになる', async () => {
@@ -199,7 +193,6 @@ describe('ProcessManager', () => {
       const stopPromise = manager.stop();
       setTimeout(() => {
         mockServerProcess.emit('exit', 0, null);
-        mockElectronProcess.emit('exit', 0, null);
       }, 10);
 
       await stopPromise;
@@ -282,27 +275,6 @@ describe('ProcessManager', () => {
       mockServerProcess.emit('exit', 1, null);
 
       // 少し待ってから状態を確認
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(manager.getStatus().state).toBe('idle');
-    });
-
-    it('Electronプロセスが終了すると状態がidleになる', async () => {
-      const threadUrl = 'https://example.slack.com/archives/C123/p456';
-      const env = new Map([['SLACK_BOT_TOKEN', 'xoxb-test']]);
-
-      setTimeout(() => {
-        (mockServerProcess.stdout as EventEmitter).emit(
-          'data',
-          Buffer.from('Server running on http://localhost:8000')
-        );
-      }, 10);
-
-      await manager.start(threadUrl, env);
-      expect(manager.getStatus().state).toBe('running');
-
-      // Electron終了をシミュレート
-      mockElectronProcess.emit('exit', 0, null);
-
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(manager.getStatus().state).toBe('idle');
     });

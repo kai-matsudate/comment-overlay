@@ -32,9 +32,10 @@ export function checkFrontendBuild(): void {
 const SETUP_PORT = 8001;
 
 /**
- * Setup Serverのメイン処理
+ * Setup Serverを起動する
+ * Electronからプログラマティックに呼び出し可能
  */
-async function main(): Promise<void> {
+export async function startSetupServer(): Promise<void> {
   // フロントエンドビルドの存在確認
   checkFrontendBuild();
 
@@ -166,12 +167,10 @@ async function main(): Promise<void> {
   process.on('SIGTERM', shutdown);
 }
 
-// テスト時は main() を実行しない
-if (!process.env['VITEST']) {
-  main().catch((err: unknown) => {
+// CLI実行時は自動起動（テスト時・Electron経由時は実行しない）
+if (!process.env['VITEST'] && !process.env['ELECTRON_RUN_AS_NODE']) {
+  startSetupServer().catch((err: unknown) => {
     console.error('Fatal error:', err);
     process.exit(1);
   });
 }
-
-export { main };

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- ネットワークアクセス（Slack API との通信に必要） -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+
+    <!-- ファイルアクセス（暗号化ファイルの読み込みに必要） -->
+    <key>com.apple.security.files.user-selected.read-only</key>
+    <true/>
+
+    <!-- Hardened Runtime で JIT を許可（Node.js に必要な場合） -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- 署名なしの実行可能ファイルを許可（開発中のみ、将来的には削除） -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- 動的ライブラリの検証を無効化（Node.js ネイティブモジュール用） -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
