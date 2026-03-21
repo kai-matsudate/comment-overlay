@@ -823,6 +823,39 @@ describe('Slack special notation processing', () => {
       const result = processMessage('Hello ** World', emojiMap);
       expect(result.sanitizedText).toBe('Hello World');
     });
+
+    it('アンダースコアを含む絵文字名がイタリック除去で壊されない', () => {
+      const emojiMap = new Map<string, string>([
+        ['thumbs_up', 'https://example.com/thumbs_up.png'],
+      ]);
+      const result = processMessage(':thumbs_up:', emojiMap);
+      expect(result.sanitizedText).toBe(':thumbs_up:');
+      expect(result.emojis).toEqual({
+        thumbs_up: 'https://example.com/thumbs_up.png',
+      });
+    });
+
+    it('アンダースコアを含む絵文字と通常テキストのイタリックが共存する', () => {
+      const emojiMap = new Map<string, string>([
+        ['thumbs_up', 'https://example.com/thumbs_up.png'],
+      ]);
+      const result = processMessage(':thumbs_up: _italic text_', emojiMap);
+      expect(result.sanitizedText).toBe(':thumbs_up: italic text');
+      expect(result.emojis).toEqual({
+        thumbs_up: 'https://example.com/thumbs_up.png',
+      });
+    });
+
+    it('複数アンダースコアを含む絵文字名が正しく処理される', () => {
+      const emojiMap = new Map<string, string>([
+        ['face_with_rolling_eyes', 'https://example.com/face_with_rolling_eyes.png'],
+      ]);
+      const result = processMessage(':face_with_rolling_eyes:', emojiMap);
+      expect(result.sanitizedText).toBe(':face_with_rolling_eyes:');
+      expect(result.emojis).toEqual({
+        face_with_rolling_eyes: 'https://example.com/face_with_rolling_eyes.png',
+      });
+    });
   });
 
   // ============================================

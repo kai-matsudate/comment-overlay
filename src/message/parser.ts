@@ -88,7 +88,15 @@ export function processMessage(
   // 7. 引用 > text → 記号除去
   processed = processed.replace(/^>\s*/gm, '');
 
-  // 8. テキスト装飾の除去
+  // 8. 絵文字パターンをプレースホルダに退避（テキスト装飾の除去前に保護）
+  const emojiPlaceholders: string[] = [];
+  const emojiPatternForProtect = /:([a-z0-9_+\-\u3000-\u9fff\u30a0-\u30ff\u3040-\u309f\uff00-\uffef]+):/gi;
+  processed = processed.replace(emojiPatternForProtect, (match) => {
+    emojiPlaceholders.push(match);
+    return `\x00EMOJI${emojiPlaceholders.length - 1}\x00`;
+  });
+
+  // 9. テキスト装飾の除去
   // 太字 *text*
   processed = processed.replace(/\*([^*]*)\*/g, '$1');
   // イタリック _text_
@@ -96,7 +104,12 @@ export function processMessage(
   // 打ち消し線 ~text~
   processed = processed.replace(/~([^~]*)~/g, '$1');
 
-  // 9. リスト処理
+  // 10. プレースホルダから絵文字を復元
+  processed = processed.replace(/\x00EMOJI(\d+)\x00/g, (_, index) => {
+    return emojiPlaceholders[Number(index)] ?? '';
+  });
+
+  // 11. リスト処理
   // 順序なしリスト（•）を検出して1行化
   if (/^[•]\s/m.test(processed)) {
     const items = processed.split('\n')
@@ -125,10 +138,10 @@ export function processMessage(
     processed = items.join(' ');
   }
 
-  // 10. 改行を空白に変換
+  // 12. 改行を空白に変換
   processed = processed.replace(/\n/g, ' ');
 
-  // 11. 連続空白を1つに
+  // 13. 連続空白を1つに
   processed = processed.replace(/\s+/g, ' ').trim();
 
   // 絵文字パターンを抽出してURLマップを生成 (日本語文字をサポート)
