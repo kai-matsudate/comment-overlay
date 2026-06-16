@@ -14,6 +14,15 @@ import { createStatusRouter, createStatusMessage } from './routes/statusRoute.js
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// .env を読み込む（存在しない場合は無視）。
+// SETUP_PORT / OVERLAY_PORT を設定可能。dotenv 依存は不要（Node 標準API）。
+// ここで読み込んだ値は spawn される overlay サーバー / Electron にも継承される。
+try {
+  process.loadEnvFile();
+} catch {
+  // .env は任意。存在しなければデフォルト値を使用する
+}
+
 /**
  * フロントエンドバンドルの存在を確認する
  * ビルドされていない場合はエラーメッセージを表示して終了
@@ -29,7 +38,7 @@ export function checkFrontendBuild(): void {
   }
 }
 
-const SETUP_PORT = 8001;
+const SETUP_PORT = Number(process.env['SETUP_PORT']) || 8001;
 
 /**
  * Setup Serverのメイン処理
