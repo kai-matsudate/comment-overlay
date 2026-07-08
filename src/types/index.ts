@@ -22,7 +22,31 @@ export interface CounterMessage {
   count: number;
 }
 
-export type WebSocketMessage = CommentMessage | CounterMessage;
+export interface SettingsMessage {
+  type: 'settings';
+  settings: DisplaySettings;
+}
+
+export type WebSocketMessage = CommentMessage | CounterMessage | SettingsMessage;
+
+// ============================================
+// 表示設定
+// ============================================
+export interface DisplaySettings {
+  /** 文字数段階ごとのフォントサイズ (px) */
+  fontSizes: {
+    /** 1〜10文字 */
+    large: number;
+    /** 11〜30文字 */
+    medium: number;
+    /** 31文字以上 */
+    small: number;
+  };
+  /** 速度一定モード（コメント幅によらず同じ速度で流す） */
+  constantSpeedEnabled: boolean;
+  /** 速度一定モード時の速度 (px/秒) */
+  speedPxPerSec: number;
+}
 
 // ============================================
 // ユーザーキャッシュ

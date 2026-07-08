@@ -28,12 +28,22 @@ export interface StartResponse {
 }
 
 /**
- * POST /api/stop のレスポンス
+ * 成否のみを返すAPIの共通レスポンス
  */
-export interface StopResponse {
+export interface ApiResponse {
   success: boolean;
   error?: string;
 }
+
+/**
+ * POST /api/stop のレスポンス
+ */
+export type StopResponse = ApiResponse;
+
+/**
+ * POST /api/settings のレスポンス
+ */
+export type SettingsResponse = ApiResponse;
 
 /**
  * GET /api/status のレスポンス

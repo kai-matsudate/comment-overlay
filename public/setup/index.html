@@ -167,6 +167,64 @@
           </div>
         </div>
 
+        <!-- 表示設定（折りたたみ） -->
+        <div class="mb-6 border border-slate-200 rounded-xl">
+          <button id="settings-toggle" class="w-full flex items-center justify-between px-4 py-3 text-left text-gray-700 font-medium hover:bg-slate-50 rounded-xl transition-colors" aria-expanded="false" aria-controls="settings-panel">
+            <span>表示設定</span>
+            <span id="settings-toggle-icon" class="text-gray-400 transition-transform">▸</span>
+          </button>
+          <div id="settings-panel" class="hidden px-4 pb-4 border-t border-slate-100">
+            <!-- フォントサイズ -->
+            <div class="mt-4 mb-6">
+              <h3 class="text-sm font-semibold text-gray-700 mb-2">フォントサイズ</h3>
+              <label class="flex items-center gap-2 text-sm text-gray-600 mb-3 cursor-pointer">
+                <input type="checkbox" id="font-custom" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                カスタマイズする
+              </label>
+              <div class="space-y-2 pl-6">
+                <div class="flex items-center gap-2 text-sm">
+                  <label for="font-large" class="w-32 text-gray-600">大 (1〜10文字)</label>
+                  <!-- value/min/max は displaySettings.ts の定数から JS で設定 -->
+                  <input type="number" id="font-large" disabled class="w-20 px-2 py-1 border border-slate-300 rounded-lg text-right disabled:bg-slate-100 disabled:text-slate-400">
+                  <span class="text-gray-500">px</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <label for="font-medium" class="w-32 text-gray-600">中 (11〜30文字)</label>
+                  <input type="number" id="font-medium" disabled class="w-20 px-2 py-1 border border-slate-300 rounded-lg text-right disabled:bg-slate-100 disabled:text-slate-400">
+                  <span class="text-gray-500">px</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <label for="font-small" class="w-32 text-gray-600">小 (31文字〜)</label>
+                  <input type="number" id="font-small" disabled class="w-20 px-2 py-1 border border-slate-300 rounded-lg text-right disabled:bg-slate-100 disabled:text-slate-400">
+                  <span class="text-gray-500">px</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- スピード -->
+            <div class="mb-6">
+              <h3 class="text-sm font-semibold text-gray-700 mb-2">スピード</h3>
+              <label class="flex items-center gap-2 text-sm text-gray-600 mb-3 cursor-pointer">
+                <input type="checkbox" id="constant-speed" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                一定モード（コメントの長さによらず同じ速度で流す）
+              </label>
+              <div class="flex items-center gap-2 text-sm pl-6">
+                <label for="speed-value" class="text-gray-600">速度</label>
+                <input type="number" id="speed-value" disabled class="w-24 px-2 py-1 border border-slate-300 rounded-lg text-right disabled:bg-slate-100 disabled:text-slate-400">
+                <span class="text-gray-500">px/秒</span>
+              </div>
+            </div>
+
+            <!-- エラーメッセージ -->
+            <div id="settings-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm" role="alert" aria-live="polite"></div>
+
+            <!-- 反映ボタン -->
+            <button id="apply-settings-btn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-xl font-medium hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/25 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all" aria-label="表示設定を反映する">
+              設定を反映
+            </button>
+          </div>
+        </div>
+
         <!-- 停止ボタン -->
         <button id="stop-btn" class="w-full bg-red-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-red-600 hover:shadow-lg hover:shadow-red-500/25 transition-all" aria-label="オーバーレイを停止する">
           オーバーレイを停止

@@ -1,7 +1,9 @@
 // ===========================================
 // 型定義（バックエンドから再利用）
 // ===========================================
-import type { WebSocketMessage } from '../../../src/types/index.js';
+import type { WebSocketMessage, DisplaySettings } from '../../../src/types/index.js';
+import { DEFAULT_DISPLAY_SETTINGS } from '../../../src/settings/displaySettings.js';
+import { getFontSize } from '../../../src/getFontSize.js';
 
 // ===========================================
 // 定数
@@ -9,7 +11,8 @@ import type { WebSocketMessage } from '../../../src/types/index.js';
 const LANE_COUNT = 10;
 const USABLE_RANGE_START = 0.1;
 const USABLE_RANGE_END = 0.9;
-const FLOW_DURATION = 8; // CSSアニメーションの秒数
+const FLOW_DURATION = 8; // CSSアニメーションの秒数（デフォルトモード時）
+const MAX_FLOW_DURATION = 60; // 速度一定モード時のduration上限（超長文が画面を占有し続けるのを防ぐ）
 
 // ===========================================
 // 状態管理
@@ -19,6 +22,9 @@ let lanes: (number | null)[] = new Array(LANE_COUNT).fill(null);
 
 // WebSocket接続
 let ws: WebSocket | null = null;
+
+// 表示設定（サーバーからの settings メッセージで更新される）
+let displaySettings: DisplaySettings = DEFAULT_DISPLAY_SETTINGS;
 
 // ===========================================
 // WebSocket接続
@@ -37,6 +43,12 @@ function connect(): void {
     // カウンターメッセージの処理
     if (data.type === 'counter') {
       updateCounter(data.count);
+      return;
+    }
+
+    // 表示設定メッセージの処理（以降のコメントから反映される）
+    if (data.type === 'settings') {
+      displaySettings = data.settings;
       return;
     }
 
@@ -84,18 +96,6 @@ function hideCounter(): void {
   if (counter) {
     counter.style.display = 'none';
   }
-}
-
-// フォントサイズ決定
-// | 文字数 | フォントサイズ |
-// | 1〜10文字 | 40px (大) |
-// | 11〜30文字 | 32px (中) |
-// | 31文字以上 | 24px (小) |
-function getFontSize(text: string): number {
-  const length = text.length;
-  if (length <= 10) return 40;
-  if (length <= 30) return 32;
-  return 24;
 }
 
 // ===========================================
@@ -215,7 +215,7 @@ function showComment(userName: string, text: string, userColor: string, emojis: 
   comment.style.color = userColor;
 
   // フォントサイズを動的に設定
-  const fontSize = getFontSize(text);
+  const fontSize = getFontSize(text, displaySettings.fontSizes);
   comment.style.fontSize = `${fontSize}px`;
 
   // コメントテキスト（絵文字を画像に置換）
@@ -239,15 +239,26 @@ function showComment(userName: string, text: string, userColor: string, emojis: 
   const now = Date.now();
   lanes[laneIndex] = now;
 
+  document.body.appendChild(comment);
+
+  // アニメーション時間を決定
+  // 速度一定モード: コメント幅に応じてdurationを計算し、流れる速度を揃える
+  // デフォルト: CSSの一律duration（FLOW_DURATION秒）
+  let flowDuration = FLOW_DURATION;
+  if (displaySettings.constantSpeedEnabled) {
+    const distance = window.innerWidth + comment.offsetWidth;
+    // 上限キャップ: 超長文でも必ずMAX_FLOW_DURATION以内に画面を抜ける（その場合のみ設定速度より速くなる）
+    flowDuration = Math.min(distance / displaySettings.speedPxPerSec, MAX_FLOW_DURATION);
+    comment.style.animationDuration = `${flowDuration}s`;
+  }
+
   // 一定時間後にレーンを解放（コメントが画面中央を過ぎた頃）
   setTimeout(() => {
     // 同じタイムスタンプの場合のみ解放（上書きされていない場合）
     if (lanes[laneIndex] === now) {
       lanes[laneIndex] = null;
     }
-  }, (FLOW_DURATION / 2) * 1000);
-
-  document.body.appendChild(comment);
+  }, (flowDuration / 2) * 1000);
 
   // アニメーション終了後に要素を削除
   comment.addEventListener('animationend', () => {

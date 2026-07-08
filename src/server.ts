@@ -47,6 +47,12 @@ import {
 // Slackモジュールをインポート
 import { fetchInitialCommentCount } from './slack/index.js';
 
+// 表示設定モジュールをインポート
+import {
+  DEFAULT_DISPLAY_SETTINGS,
+  validateDisplaySettings,
+} from './settings/displaySettings.js';
+
 // 後方互換性のため型と関数を再エクスポート
 export type { SlackClient, ProcessedMessage } from './types/index.js';
 export { getStandardEmojiUrl, isStandardEmojiMapInitialized, getEmojiList, clearEmojiCache } from './emoji/index.js';
@@ -99,8 +105,12 @@ async function main(): Promise<void> {
     },
   }));
 
+  expressApp.use(express.json());
   expressApp.use(express.static(path.join(__dirname, '../public')));
   const httpServer = createServer(expressApp);
+
+  // 表示設定（起動時は常にデフォルト、メモリ保持のみ）
+  let displaySettings = DEFAULT_DISPLAY_SETTINGS;
 
   // WebSocket サーバー
   // セキュリティ: Originヘッダーを検証してlocalhostからの接続のみ許可
@@ -125,8 +135,9 @@ async function main(): Promise<void> {
     clients.add(ws);
     console.log(`WebSocket client connected (total: ${clients.size})`);
 
-    // 新規クライアントに現在のカウントを送信
+    // 新規クライアントに現在のカウントと表示設定を送信
     ws.send(JSON.stringify({ type: 'counter', count: getCommentCount() }));
+    ws.send(JSON.stringify({ type: 'settings', settings: displaySettings }));
 
     ws.on('close', () => {
       clients.delete(ws);
@@ -143,6 +154,20 @@ async function main(): Promise<void> {
       }
     }
   }
+
+  // 表示設定の更新API（Setupサーバー経由で呼ばれる）
+  expressApp.post('/api/settings', (req: express.Request, res: express.Response) => {
+    const validated = validateDisplaySettings(req.body);
+    if (!validated) {
+      res.status(400).json({ success: false, error: 'Invalid display settings' });
+      return;
+    }
+    displaySettings = validated;
+    console.log('Display settings updated:', JSON.stringify(displaySettings));
+    // 接続中の全クライアントに新設定をブロードキャスト（以降のコメントから反映）
+    broadcast({ type: 'settings', settings: displaySettings });
+    res.json({ success: true });
+  });
 
   // Slack Bolt App（Socket Mode）
   const slackApp = new App({

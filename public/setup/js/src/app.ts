@@ -2,6 +2,17 @@
 // Comment Overlay Setup - フロントエンドアプリケーション
 // ===========================================
 
+import type { DisplaySettings } from '../../../../src/types/index.js';
+import type { ApiResponse } from '../../../../src/setup/types/index.js';
+import {
+  DEFAULT_DISPLAY_SETTINGS,
+  FONT_SIZE_MIN,
+  FONT_SIZE_MAX,
+  SPEED_MIN,
+  SPEED_MAX,
+  validateDisplaySettings,
+} from '../../../../src/settings/displaySettings.js';
+
 // ===========================================
 // 型定義
 // ===========================================
@@ -11,11 +22,6 @@ type AppState = 'idle' | 'ready' | 'starting' | 'running' | 'stopping';
 interface StatusResponse {
   state: AppState;
   threadUrl?: string;
-}
-
-interface ApiResponse {
-  success: boolean;
-  error?: string;
 }
 
 interface WebSocketStatusMessage {
@@ -57,6 +63,19 @@ interface DOMElements {
   currentUrl: HTMLElement;
   uptime: HTMLElement;
   stopBtn: HTMLButtonElement;
+
+  // Step 3: 表示設定
+  settingsToggle: HTMLButtonElement;
+  settingsToggleIcon: HTMLElement;
+  settingsPanel: HTMLElement;
+  fontCustom: HTMLInputElement;
+  fontLarge: HTMLInputElement;
+  fontMedium: HTMLInputElement;
+  fontSmall: HTMLInputElement;
+  constantSpeed: HTMLInputElement;
+  speedValue: HTMLInputElement;
+  settingsError: HTMLElement;
+  applySettingsBtn: HTMLButtonElement;
 }
 
 // ===========================================
@@ -107,6 +126,19 @@ const elements: DOMElements = {
   currentUrl: document.getElementById('current-url')!,
   uptime: document.getElementById('uptime')!,
   stopBtn: document.getElementById('stop-btn') as HTMLButtonElement,
+
+  // Step 3: 表示設定
+  settingsToggle: document.getElementById('settings-toggle') as HTMLButtonElement,
+  settingsToggleIcon: document.getElementById('settings-toggle-icon')!,
+  settingsPanel: document.getElementById('settings-panel')!,
+  fontCustom: document.getElementById('font-custom') as HTMLInputElement,
+  fontLarge: document.getElementById('font-large') as HTMLInputElement,
+  fontMedium: document.getElementById('font-medium') as HTMLInputElement,
+  fontSmall: document.getElementById('font-small') as HTMLInputElement,
+  constantSpeed: document.getElementById('constant-speed') as HTMLInputElement,
+  speedValue: document.getElementById('speed-value') as HTMLInputElement,
+  settingsError: document.getElementById('settings-error')!,
+  applySettingsBtn: document.getElementById('apply-settings-btn') as HTMLButtonElement,
 };
 
 // ===========================================
@@ -248,7 +280,14 @@ function connectWebSocket(): void {
  * 状態更新を処理
  */
 function handleStatusUpdate(status: StatusResponse): void {
+  const prevState = currentState;
   currentState = status.state;
+
+  // 新しいセッション開始時は表示設定をデフォルトに戻す
+  // （オーバーレイサーバーは常にデフォルト設定で起動するため、UIも同期させる）
+  if (status.state === 'running' && prevState !== 'running') {
+    resetSettingsForm();
+  }
 
   if (status.state === 'idle') {
     showStep(1);
@@ -374,6 +413,136 @@ async function stop(): Promise<void> {
 }
 
 // ===========================================
+// 表示設定
+// ===========================================
+
+/**
+ * チェックボックスの状態に応じて入力フォームの有効/無効を切り替え
+ */
+function updateSettingsFormState(): void {
+  const fontCustom = elements.fontCustom.checked;
+  elements.fontLarge.disabled = !fontCustom;
+  elements.fontMedium.disabled = !fontCustom;
+  elements.fontSmall.disabled = !fontCustom;
+
+  elements.speedValue.disabled = !elements.constantSpeed.checked;
+}
+
+/**
+ * 数値入力の min/max を displaySettings.ts の定数から設定
+ * （HTML側にハードコードせず、定数の一元管理を保つ）
+ */
+function initSettingsFormConstraints(): void {
+  for (const input of [elements.fontLarge, elements.fontMedium, elements.fontSmall]) {
+    input.min = String(FONT_SIZE_MIN);
+    input.max = String(FONT_SIZE_MAX);
+  }
+  elements.speedValue.min = String(SPEED_MIN);
+  elements.speedValue.max = String(SPEED_MAX);
+}
+
+/**
+ * 表示設定フォームをデフォルト状態に戻す
+ */
+function resetSettingsForm(): void {
+  elements.fontCustom.checked = false;
+  elements.fontLarge.value = String(DEFAULT_DISPLAY_SETTINGS.fontSizes.large);
+  elements.fontMedium.value = String(DEFAULT_DISPLAY_SETTINGS.fontSizes.medium);
+  elements.fontSmall.value = String(DEFAULT_DISPLAY_SETTINGS.fontSizes.small);
+  elements.constantSpeed.checked = false;
+  elements.speedValue.value = String(DEFAULT_DISPLAY_SETTINGS.speedPxPerSec);
+  hideError(elements.settingsError);
+  updateSettingsFormState();
+
+  // パネルを閉じた状態に戻す
+  elements.settingsPanel.classList.add('hidden');
+  elements.settingsToggle.setAttribute('aria-expanded', 'false');
+  elements.settingsToggleIcon.textContent = '▸';
+}
+
+/**
+ * フォーム値から表示設定オブジェクトを構築
+ * @returns 妥当な場合は DisplaySettings、不正な場合はエラーメッセージ
+ */
+function buildDisplaySettings(): DisplaySettings | string {
+  const parseSize = (input: HTMLInputElement, label: string): number | string => {
+    const value = Number(input.value);
+    if (!Number.isFinite(value) || value < FONT_SIZE_MIN || value > FONT_SIZE_MAX) {
+      return `${label}は ${FONT_SIZE_MIN}〜${FONT_SIZE_MAX} の範囲で入力してください`;
+    }
+    return value;
+  };
+
+  let fontSizes = { ...DEFAULT_DISPLAY_SETTINGS.fontSizes };
+  if (elements.fontCustom.checked) {
+    const large = parseSize(elements.fontLarge, 'フォントサイズ(大)');
+    if (typeof large === 'string') return large;
+    const medium = parseSize(elements.fontMedium, 'フォントサイズ(中)');
+    if (typeof medium === 'string') return medium;
+    const small = parseSize(elements.fontSmall, 'フォントサイズ(小)');
+    if (typeof small === 'string') return small;
+    fontSizes = { large, medium, small };
+  }
+
+  const constantSpeedEnabled = elements.constantSpeed.checked;
+  let speedPxPerSec = DEFAULT_DISPLAY_SETTINGS.speedPxPerSec;
+  if (constantSpeedEnabled) {
+    const value = Number(elements.speedValue.value);
+    if (!Number.isFinite(value) || value < SPEED_MIN || value > SPEED_MAX) {
+      return `速度は ${SPEED_MIN}〜${SPEED_MAX} の範囲で入力してください`;
+    }
+    speedPxPerSec = value;
+  }
+
+  // サーバー側と同じバリデーションを最終ゲートとして通す
+  // （上のチェックはフィールド別エラーメッセージ用。ルールの正はvalidateDisplaySettings）
+  const validated = validateDisplaySettings({ fontSizes, constantSpeedEnabled, speedPxPerSec });
+  if (!validated) {
+    return '設定値が不正です。入力内容を確認してください';
+  }
+  return validated;
+}
+
+/**
+ * 表示設定を反映
+ */
+async function applySettings(): Promise<void> {
+  hideError(elements.settingsError);
+
+  const settings = buildDisplaySettings();
+  if (typeof settings === 'string') {
+    showError(elements.settingsError, settings);
+    return;
+  }
+
+  elements.applySettingsBtn.disabled = true;
+
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+
+    const result = await response.json() as ApiResponse;
+
+    if (result.success) {
+      // 反映成功をボタンで一時的にフィードバック
+      elements.applySettingsBtn.textContent = '反映しました ✓';
+      setTimeout(() => {
+        elements.applySettingsBtn.textContent = '設定を反映';
+      }, 2000);
+    } else {
+      showError(elements.settingsError, result.error ?? '設定の反映に失敗しました');
+    }
+  } catch {
+    showError(elements.settingsError, 'ネットワークエラーが発生しました。接続を確認して再試行してください。');
+  } finally {
+    elements.applySettingsBtn.disabled = false;
+  }
+}
+
+// ===========================================
 // バリデーション
 // ===========================================
 
@@ -454,9 +623,41 @@ elements.startBtn.addEventListener('click', start);
 // 停止ボタン
 elements.stopBtn.addEventListener('click', stop);
 
+// 表示設定: 開閉トグル
+elements.settingsToggle.addEventListener('click', () => {
+  const isOpen = !elements.settingsPanel.classList.contains('hidden');
+  elements.settingsPanel.classList.toggle('hidden');
+  elements.settingsToggle.setAttribute('aria-expanded', String(!isOpen));
+  elements.settingsToggleIcon.textContent = isOpen ? '▸' : '▾';
+});
+
+// 表示設定: チェックボックスによるフォーム有効/無効の切り替え
+// チェックを外したら入力値をデフォルトに戻す（disabled欄の表示 = 実際に適用される値、を保つ）
+elements.fontCustom.addEventListener('change', () => {
+  if (!elements.fontCustom.checked) {
+    elements.fontLarge.value = String(DEFAULT_DISPLAY_SETTINGS.fontSizes.large);
+    elements.fontMedium.value = String(DEFAULT_DISPLAY_SETTINGS.fontSizes.medium);
+    elements.fontSmall.value = String(DEFAULT_DISPLAY_SETTINGS.fontSizes.small);
+  }
+  updateSettingsFormState();
+});
+elements.constantSpeed.addEventListener('change', () => {
+  if (!elements.constantSpeed.checked) {
+    elements.speedValue.value = String(DEFAULT_DISPLAY_SETTINGS.speedPxPerSec);
+  }
+  updateSettingsFormState();
+});
+
+// 表示設定: 反映ボタン
+elements.applySettingsBtn.addEventListener('click', applySettings);
+
 // ===========================================
 // 初期化
 // ===========================================
+
+// 表示設定フォームの初期化（min/max・デフォルト値を定数から設定）
+initSettingsFormConstraints();
+resetSettingsForm();
 
 // 初期状態の取得
 fetch('/api/status')
