@@ -1,101 +1,193 @@
 # Comment Overlay
 
-Slackスレッドのコメントをニコニコ動画風にデスクトップ上にオーバーレイ表示するツール。
+Slackスレッドへの新しい返信を、デスクトップ上に流れるコメントとして表示するツールです。
+配信、オンラインイベント、社内発表などで、参加者の反応を画面上に表示できます。
+
+## 主な機能
+
+- 指定したSlackスレッドへの新しい返信をリアルタイム表示
+- 投稿者名、ユーザーごとの文字色、標準絵文字・カスタム絵文字に対応
+- コメント同士の重なりを抑えるレーン制御
+- 既存の返信数を含むコメントカウンター
+- ほかのウィンドウより手前に表示され、マウス操作を妨げない透明なオーバーレイ
+- ブラウザのセットアップ画面から認証情報の復号化、開始、停止が可能
+
+## 動作の概要
+
+```text
+Slackスレッド
+    │ Socket Mode
+    ▼
+ローカルサーバー ── WebSocket ──▶ Electronオーバーレイ
+    ▲
+    │ 起動・停止
+セットアップ画面
+```
+
+Slackの認証情報とコメントはローカルで処理されます。外部の中継サーバーは使用しません。
 
 ## 必要なもの
 
 - Node.js 20.12.0以上
-- Slackワークスペースの管理者権限
+- npm
+- OpenSSL（認証情報を暗号化・復号化する場合）
+- Electronを実行できるデスクトップ環境
+- Slack Appを作成・インストールできる権限
+  - ワークスペースの設定によっては、管理者の承認が必要です
 
-## セットアップ
+## 利用者向けクイックスタート
 
-### 1. Manifest からアプリを作成
+Slack Appと暗号化済み認証情報を管理者が準備済みの場合の手順です。
 
-1. [Slack API](https://api.slack.com/apps) にアクセス
-2. **Create New App** → **From an app manifest** を選択
-3. インストール先のワークスペースを選択 → **Next**
-4. 表示されている **JSON** タブに `slack-app-manifest.json` の内容をすべて貼り付け → **Next**
-5. 設定内容を確認して **Create**
-
-アプリ名を変えたい場合は、貼り付けたJSONの `name` および `display_name` を編集してください。
-
-### 2. App-Level Token（`xapp-`）の生成
-
-Socket Mode 用のトークンはManifestに含められないため、手動で生成します。
-
-1. 左メニュー **Basic Information** → **App-Level Tokens** → **Generate Token and Scopes**
-2. Token名を入力（例: `socket-token`）し、Scope に `connections:write` を追加 → **Generate**
-3. 表示された `xapp-` で始まるトークンをメモ（後で使用）
-
-必要に応じて **Display Information** からアプリのアイコンを設定してください。
-
-### 3. インストールして Bot Token（`xoxb-`）を取得
-
-1. 左メニュー **Install App** → **Install to ${Your Workspace Name}** をクリック
-2. 許可画面で **許可する** をクリック
-3. 表示された `xoxb-` で始まるトークンをメモ
-
-### 4. サーバーをビルド
+### 1. インストール
 
 ```bash
-git clone git@github.com:kai-matsudate/comment-overlay.git
+git clone https://github.com/kai-matsudate/comment-overlay.git
 cd comment-overlay
 npm install
 npm run build
 ```
 
-### 5. 環境変数の設定
-
-#### 管理者の場合（Slack トークンを管理する人）
-
-暗号化スクリプトを実行すると、対話形式でトークンを入力できます:
-
-```bash
-npm run encrypt-credentials
-# SLACK_BOT_TOKEN (xoxb-...): 🔒️ → 手順3 のインストール時に取得したトークンを入力してください
-# SLACK_APP_TOKEN (xapp-...): 🔒️ → 手順2 で生成したトークンを入力してください
-# → ✓ Encrypted to credentials.encrypted
-# → パスワード: xxxxxx
-```
-
-生成された `credentials.encrypted` とパスワードを Comment Overlay の利用者に共有してください。
-
-#### Comment Overlay の利用者の場合
-
-1. トークン管理者から `credentials.encrypted` とパスワードを受け取る
-2. `credentials.encrypted` をプロジェクトルートに配置
-3. 「使い方」の手順に進む（WebGUIで復号化を行います）
-
-### 6. Slackチャンネルへの招待
-
-実況したいチャンネルで以下を実行:
-
-```
-/invite @Comment Overlay
-```
-
-（アプリ名は作成時に設定した名前に置き換えてください）
-
-## 使い方
-
-### セットアップウィザードの起動
+### 2. セットアップ画面を起動
 
 ```bash
 npm start
 ```
 
-ブラウザで http://localhost:8001 が自動的に開き、3ステップのセットアップウィザードが表示されます。
+ブラウザで <http://localhost:8001> を開き、次の順に操作します。
 
-1. **Step 1: 認証情報の復号化**（`credentials.encrypted`がある場合のみ）
-   - 管理者から共有されたパスワードを入力
-   - 「復号化」ボタンをクリック
+1. 管理者から受け取った `credentials.encrypted` を選択する
+2. 別経路で受け取ったパスワードを入力し、認証情報を復号化する
+3. 対象のSlackスレッドを開き、メニューから「リンクをコピー」を選ぶ
+4. コピーしたURLを入力し、「オーバーレイを開始」を押す
 
-2. **Step 2: スレッドURLの入力**
-   - 監視したいSlackスレッドのURLを入力
-   - URLはSlackでスレッドを開き「リンクをコピー」で取得
+セットアップ画面の「オーバーレイを停止」を押すと表示を終了できます。セットアップサーバー自体を終了する場合は、`npm start` を実行したターミナルで `Ctrl+C` を押してください。
 
-3. **Step 3: オーバーレイの起動**
-   - 「起動」ボタンをクリック
-   - デスクトップ全体に透明なオーバーレイウィンドウが表示されます
+## 管理者向けSlack App設定
 
-ポート番号を変えたい場合、 `.env.example` を参考に `.env` ファイルにてポート番号を指定してください。
+### 1. ManifestからSlack Appを作成
+
+1. [Slack API: Your Apps](https://api.slack.com/apps) を開く
+2. **Create New App** → **From an app manifest** を選ぶ
+3. インストール先のワークスペースを選び、**Next** を押す
+4. **JSON** タブに [`slack-app-manifest.json`](slack-app-manifest.json) の内容を貼り付ける
+5. 設定内容を確認し、**Create** を押す
+
+Manifestには、Socket Mode、Bot Token Scopes、Event Subscriptionsの設定が含まれています。アプリ名を変える場合は、貼り付けたJSONの `display_information.name` と `features.bot_user.display_name` を変更してください。
+
+### 2. App-Level Tokenを生成
+
+App-Level TokenはManifestに含められないため、手動で生成します。
+
+1. **Basic Information** → **App-Level Tokens** → **Generate Token and Scopes** を選ぶ
+2. Token名を入力し、`connections:write` スコープを追加する
+3. 発行された `xapp-` で始まるトークンを控える
+
+このトークンを、後述の `SLACK_APP_TOKEN` として使用します。
+
+### 3. ワークスペースへインストール
+
+1. **Install App** からアプリをワークスペースへインストールする
+2. 発行された `xoxb-` で始まるBot User OAuth Tokenを控える
+3. スコープを追加・変更した場合は、アプリを再インストールする
+
+このトークンを、後述の `SLACK_BOT_TOKEN` として使用します。
+
+### 4. 対象チャンネルへ招待
+
+監視するチャンネルで次のコマンドを実行します。アプリ名は作成時の名前に置き換えてください。
+
+```text
+/invite @Comment Overlay
+```
+
+### 5. 認証情報を暗号化
+
+リポジトリのルートで次のコマンドを実行し、2つのトークンを入力します。入力内容はターミナルに表示されません。
+
+```bash
+npm run encrypt-credentials
+```
+
+次の2つが生成・表示されます。
+
+- `credentials.encrypted`: 暗号化済み認証情報ファイル
+- 復号化パスワード: コマンドの実行結果に一度だけ表示
+
+ファイルとパスワードは別々の安全な経路で利用者へ共有してください。Slackトークン、復号化パスワード、復号化後の内容はGitへコミットしないでください。
+
+## 表示対象と制約
+
+- 起動後に対象スレッドへ投稿された新しい返信が流れます
+- 起動前の返信は画面には流れませんが、コメントカウンターの初期値に含まれます
+- 親メッセージ、編集・削除イベント、本文のない投稿、ユーザー情報のない投稿は表示しません
+- 現在はチャンネル内のスレッドに対応しています。ダイレクトメッセージは対象外です
+- 同時に監視できるスレッドは1つです
+- リンクやメンションなど、一部のSlack記法は画面表示用に簡略化されます
+
+## よくある問題
+
+### セットアップ画面にアクセスできない
+
+`npm start` を実行したターミナルを確認してください。フロントエンドが未ビルドの場合は、次を実行してから再起動します。
+
+```bash
+npm run build
+npm start
+```
+
+セットアップ画面は `8001`、オーバーレイ用ローカルサーバーは `8000` ポートを使用します。ほかのプロセスと競合する場合は、`.env.example` を `.env` にコピーし、`SETUP_PORT` または `OVERLAY_PORT` を変更してください。ポートには `1` から `65535` までの整数を指定できます。
+
+### コメントが表示されない
+
+次を順に確認してください。
+
+1. Slack Appを対象チャンネルへ招待したか
+2. 対象チャンネルに対応するイベントとスコープを設定したか
+3. スコープ変更後にSlack Appを再インストールしたか
+4. スレッド本体ではなく、そのスレッドへの新しい返信を投稿したか
+5. 入力したURLがSlackの「リンクをコピー」で取得したスレッドURLか
+
+### 認証情報を復号化できない
+
+- 管理者から受け取った最新のファイルとパスワードの組み合わせか確認する
+- ファイル名の変更は問題ありませんが、内容を編集しない
+- パスワードを紛失した場合は復元できないため、管理者が認証情報を再生成する
+
+## 開発
+
+```bash
+npm install
+npm run build
+npm test
+npm run typecheck:all
+```
+
+主なコマンドは次のとおりです。
+
+| コマンド | 内容 |
+| --- | --- |
+| `npm start` | セットアップ画面を起動 |
+| `npm run build` | ブラウザ向けTypeScriptをビルド |
+| `npm run build:backend` | バックエンドのTypeScriptをビルド |
+| `npm run build:all` | バックエンドとブラウザ向けコードをビルド |
+| `npm test` | テストを1回実行 |
+| `npm run test:watch` | テストを監視モードで実行 |
+| `npm run typecheck:all` | バックエンドとフロントエンドを型チェック |
+| `npm run dev:overlay -- "<thread-url>"` | セットアップ画面を介さず開発モードで起動 |
+| `npm run encrypt-credentials` | Slackトークンを暗号化 |
+
+開発への参加方法は [CONTRIBUTING.md](CONTRIBUTING.md)、脆弱性の報告方法は [SECURITY.md](SECURITY.md) を参照してください。
+
+## セキュリティ上の注意
+
+- `credentials.encrypted` は暗号化されていますが、公開リポジトリや不特定多数へ配布しないでください
+- 復号化パスワードと暗号化ファイルは別経路で共有してください
+- 不要になったSlackトークンや漏えいした可能性のあるトークンは、Slack Appの管理画面から失効・再発行してください
+- セットアップ画面とオーバーレイ用サーバーはローカル利用を前提としています。インターネットへ公開しないでください
+
+## ライセンス
+
+[MIT License](LICENSE)
+
+Comment Overlayは独立したオープンソースプロジェクトであり、Slack Technologies, LLCの公式製品ではありません。
