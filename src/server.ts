@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import resolvePort from '../shared/resolvePort.cjs';
 
 // 型定義をインポート
 import type {
@@ -194,7 +195,7 @@ async function main(): Promise<void> {
   });
 
   // サーバー起動
-  const PORT = process.env['OVERLAY_PORT'] || 8000;
+  const PORT = resolvePort(process.env['OVERLAY_PORT'], 8000);
 
   // HTTPサーバーを先に起動（Electronが即座に接続できる）
   httpServer.listen(PORT, () => {

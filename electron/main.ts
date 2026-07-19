@@ -1,4 +1,5 @@
 import { app, BrowserWindow, screen } from 'electron'
+import resolvePort from '../shared/resolvePort.cjs'
 
 // シグナルハンドリング: グレースフルシャットダウン
 const gracefulShutdown = () => {
@@ -11,10 +12,7 @@ process.on('SIGINT', gracefulShutdown)
 
 // セキュリティ: ホストは localhost 固定。ポートのみ環境変数 OVERLAY_PORT で変更可能とし、
 // 数値以外（外部URL注入など）は受け付けずデフォルトにフォールバックする。
-const overlayPort = (() => {
-  const n = Number(process.env['OVERLAY_PORT'])
-  return Number.isInteger(n) && n > 0 && n <= 65535 ? n : 8000
-})()
+const overlayPort = resolvePort(process.env['OVERLAY_PORT'], 8000)
 const OVERLAY_URL = `http://localhost:${overlayPort}`
 
 function createOverlayWindow(): BrowserWindow {

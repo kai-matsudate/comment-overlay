@@ -9,6 +9,7 @@ import { ProcessManager } from './services/processManager.js';
 import { createDecryptRouter } from './routes/decryptRoute.js';
 import { createControlRouter } from './routes/controlRoute.js';
 import { createStatusRouter, createStatusMessage } from './routes/statusRoute.js';
+import resolvePort from '../../shared/resolvePort.cjs';
 
 // ESM用の __dirname 代替
 const __filename = fileURLToPath(import.meta.url);
@@ -38,7 +39,7 @@ export function checkFrontendBuild(): void {
   }
 }
 
-const SETUP_PORT = Number(process.env['SETUP_PORT']) || 8001;
+const SETUP_PORT = resolvePort(process.env['SETUP_PORT'], 8001);
 
 /**
  * Setup Serverのメイン処理
