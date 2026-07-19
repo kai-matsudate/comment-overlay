@@ -8,6 +8,7 @@ import { existsSync } from 'fs';
 import { ProcessManager } from './services/processManager.js';
 import { createDecryptRouter } from './routes/decryptRoute.js';
 import { createControlRouter } from './routes/controlRoute.js';
+import { createSettingsRouter } from './routes/settingsRoute.js';
 import { createStatusRouter, createStatusMessage } from './routes/statusRoute.js';
 
 // ESM用の __dirname 代替
@@ -77,6 +78,8 @@ async function main(): Promise<void> {
     processManager,
     () => decryptedEnv
   ));
+
+  app.use('/api', createSettingsRouter(processManager));
 
   app.use('/api', createStatusRouter(
     processManager,
