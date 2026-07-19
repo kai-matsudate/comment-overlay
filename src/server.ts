@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import resolvePort from '../shared/resolvePort.cjs';
 
 // 型定義をインポート
 import type {
@@ -58,6 +59,15 @@ export { fetchInitialCommentCount } from './slack/index.js';
 // ESM用の __dirname 代替
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// .env を読み込む（存在しない場合は無視）。OVERLAY_PORT を設定可能。
+// setupServer 経由で起動された場合は親の環境変数を継承するため不要だが、
+// 単体起動（npx tsx src/server.ts ...）でも .env を反映できるようにする。
+try {
+  process.loadEnvFile();
+} catch {
+  // .env は任意
+}
 
 // ============================================
 // メイン処理
@@ -185,7 +195,7 @@ async function main(): Promise<void> {
   });
 
   // サーバー起動
-  const PORT = process.env['PORT'] || 8000;
+  const PORT = resolvePort(process.env['OVERLAY_PORT'], 8000);
 
   // HTTPサーバーを先に起動（Electronが即座に接続できる）
   httpServer.listen(PORT, () => {

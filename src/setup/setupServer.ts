@@ -9,10 +9,20 @@ import { ProcessManager } from './services/processManager.js';
 import { createDecryptRouter } from './routes/decryptRoute.js';
 import { createControlRouter } from './routes/controlRoute.js';
 import { createStatusRouter, createStatusMessage } from './routes/statusRoute.js';
+import resolvePort from '../../shared/resolvePort.cjs';
 
 // ESM用の __dirname 代替
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// .env を読み込む（存在しない場合は無視）。
+// SETUP_PORT / OVERLAY_PORT を設定可能。dotenv 依存は不要（Node 標準API）。
+// ここで読み込んだ値は spawn される overlay サーバー / Electron にも継承される。
+try {
+  process.loadEnvFile();
+} catch {
+  // .env は任意。存在しなければデフォルト値を使用する
+}
 
 /**
  * フロントエンドバンドルの存在を確認する
@@ -29,7 +39,7 @@ export function checkFrontendBuild(): void {
   }
 }
 
-const SETUP_PORT = 8001;
+const SETUP_PORT = resolvePort(process.env['SETUP_PORT'], 8001);
 
 /**
  * Setup Serverのメイン処理

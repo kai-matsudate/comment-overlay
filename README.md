@@ -28,7 +28,7 @@ Slackの認証情報とコメントはローカルで処理されます。外部
 
 ## 必要なもの
 
-- Node.js 20以上
+- Node.js 20.12.0以上
 - npm
 - OpenSSL（認証情報を暗号化・復号化する場合）
 - Electronを実行できるデスクトップ環境
@@ -65,53 +65,35 @@ npm start
 
 ## 管理者向けSlack App設定
 
-### 1. Slack Appを作成
+### 1. ManifestからSlack Appを作成
 
 1. [Slack API: Your Apps](https://api.slack.com/apps) を開く
-2. **Create New App** → **From scratch** を選ぶ
-3. アプリ名とインストール先のワークスペースを指定する
+2. **Create New App** → **From an app manifest** を選ぶ
+3. インストール先のワークスペースを選び、**Next** を押す
+4. **JSON** タブに [`slack-app-manifest.json`](slack-app-manifest.json) の内容を貼り付ける
+5. 設定内容を確認し、**Create** を押す
 
-### 2. Socket Modeを有効化
+Manifestには、Socket Mode、Bot Token Scopes、Event Subscriptionsの設定が含まれています。アプリ名を変える場合は、貼り付けたJSONの `display_information.name` と `features.bot_user.display_name` を変更してください。
 
-1. **Socket Mode** で **Enable Socket Mode** を有効にする
-2. App-Level Tokenを作成し、`connections:write` スコープを付与する
+### 2. App-Level Tokenを生成
+
+App-Level TokenはManifestに含められないため、手動で生成します。
+
+1. **Basic Information** → **App-Level Tokens** → **Generate Token and Scopes** を選ぶ
+2. Token名を入力し、`connections:write` スコープを追加する
 3. 発行された `xapp-` で始まるトークンを控える
 
 このトークンを、後述の `SLACK_APP_TOKEN` として使用します。
 
-### 3. Bot Token Scopesを追加
+### 3. ワークスペースへインストール
 
-**OAuth & Permissions** → **Bot Token Scopes** に次のスコープを追加します。
-
-| スコープ | 用途 |
-| --- | --- |
-| `channels:history` | パブリックチャンネルの返信を取得 |
-| `groups:history` | プライベートチャンネルの返信を取得 |
-| `emoji:read` | ワークスペースのカスタム絵文字を取得 |
-| `users:read` | 投稿者の表示名を取得 |
-
-パブリックチャンネルだけで利用する場合、`groups:history` は不要です。
-
-### 4. イベント購読を設定
-
-**Event Subscriptions** で **Enable Events** を有効にし、**Subscribe to bot events** に必要なイベントを追加します。
-
-| イベント | 対象 |
-| --- | --- |
-| `message.channels` | パブリックチャンネル |
-| `message.groups` | プライベートチャンネル |
-
-パブリックチャンネルだけで利用する場合、`message.groups` は不要です。
-
-### 5. ワークスペースへインストール
-
-1. **OAuth & Permissions** からアプリをワークスペースへインストールする
+1. **Install App** からアプリをワークスペースへインストールする
 2. 発行された `xoxb-` で始まるBot User OAuth Tokenを控える
 3. スコープを追加・変更した場合は、アプリを再インストールする
 
 このトークンを、後述の `SLACK_BOT_TOKEN` として使用します。
 
-### 6. 対象チャンネルへ招待
+### 4. 対象チャンネルへ招待
 
 監視するチャンネルで次のコマンドを実行します。アプリ名は作成時の名前に置き換えてください。
 
@@ -119,7 +101,7 @@ npm start
 /invite @Comment Overlay
 ```
 
-### 7. 認証情報を暗号化
+### 5. 認証情報を暗号化
 
 リポジトリのルートで次のコマンドを実行し、2つのトークンを入力します。入力内容はターミナルに表示されません。
 
@@ -154,7 +136,7 @@ npm run build
 npm start
 ```
 
-セットアップ画面は `8001`、オーバーレイ用ローカルサーバーは `8000` ポートを使用します。
+セットアップ画面は `8001`、オーバーレイ用ローカルサーバーは `8000` ポートを使用します。ほかのプロセスと競合する場合は、`.env.example` を `.env` にコピーし、`SETUP_PORT` または `OVERLAY_PORT` を変更してください。ポートには `1` から `65535` までの整数を指定できます。
 
 ### コメントが表示されない
 
